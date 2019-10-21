@@ -15,6 +15,7 @@
 #include <roc/frame.h>
 #include <roc/receiver.h>
 
+
 #include "utils/log.hpp"
 
 
@@ -24,6 +25,7 @@
 #define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
 #define SIGNAL_EXAMPLE_BUFFER_SIZE 1000
 
+class Config;
 class audio_transmitter {
  public:
   static void init_audio_transmitter(void *target_ip_ptr) {
@@ -105,23 +107,12 @@ class audio_transmitter {
         != 0) {
       LOG(ERROR) << "roc_sender_connect";
     }
-    size_t i;
-    for (;;) {
-      /* Generate sine wave. */
-      float samples[SIGNAL_EXAMPLE_BUFFER_SIZE];
-      audio_transmitter::gensine(samples, SIGNAL_EXAMPLE_BUFFER_SIZE);
 
-      /* Write samples to the sender. */
-      roc_frame frame;
-      memset(&frame, 0, sizeof(frame));
+    sndio::Config source_config;
+    source_config.channels = NumCh;
+    source_config.frame_size = SamplesPerFrame;
 
-      frame.samples = samples;
-      frame.samples_size = SIGNAL_EXAMPLE_BUFFER_SIZE * sizeof(float);
 
-      if (roc_sender_write(sender, &frame) != 0) {
-        LOG(DEBUG) << "roc_sender_write";
-      }
-    }
     /* Destroy sender. */
     if (roc_sender_close(sender) != 0) {
       LOG(ERROR) << "roc_sender_close";
