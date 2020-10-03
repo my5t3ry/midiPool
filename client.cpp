@@ -6,7 +6,6 @@
 #include "signal_handler.hpp"
 #include "json.hpp"
 #include <memory>
-
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 

@@ -82,13 +82,10 @@ class chat_session
   const std::string &GetUuid() const {
     return uuid;
   }
-
   void start() {
     room_.join(shared_from_this());
     do_read();
-
   }
-
   void deliver(const nlohmann::json &msg) {
     bool write_in_progress = !write_msgs_.empty();
     write_msgs_.push_back(msg);
@@ -96,7 +93,6 @@ class chat_session
       do_write();
     }
   }
-
  private:
   void do_read() {
     auto self(shared_from_this());
@@ -121,7 +117,6 @@ class chat_session
       std::cout << "Error: " << err << "\n";
     }
   }
-
   void do_write() {
     auto self(shared_from_this());
     if (!write_msgs_.empty()) {
@@ -132,12 +127,10 @@ class chat_session
                                            boost::asio::placeholders::error));
     }
   }
-
   void handle_write(const boost::system::error_code &ec) {
     if (!ec) {
       write_msgs_.pop_front();
       if (!write_msgs_.empty()) {
-        SLEEP(30);
         do_write();
       }
     } else {
@@ -189,12 +182,9 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
         std::cout << "MIDI clock (one beat)" << std::endl;
       SLEEP(sleep_ms);
     }
-
-    // MIDI stop
     nlohmann::json message;
     message["bytes"][0] = 0xFC;
     message["meta"]["uuid"] = session->GetUuid();
-
     session->deliver(message);
     std::cout << "MIDI stop" << std::endl;
     SLEEP(500);
