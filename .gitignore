@@ -1,0 +1,13 @@
+tags
+Makefile
+*.a
+*.Debug
+*.exe
+*.map
+*.o
+*.rc
+*.Release
+
+
+*.iml
+.idea
