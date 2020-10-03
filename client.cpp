@@ -5,14 +5,14 @@
 #include <deque>
 #include <thread>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include "midi_message.hpp"
 #include "main_loop.hpp"
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+#include "json.hpp"
+
 
 
 // Short alias for this namespace
-namespace pt = boost::property_tree;
 
 using boost::asio::ip::tcp;
 
@@ -20,7 +20,7 @@ enum {
   max_length = 1024
 };
 
-typedef std::deque<pt::ptree> midi_message_queue;
+typedef std::deque<nlohmann::json> midi_message_queue;
 
 class chat_client {
  public:
@@ -30,116 +30,81 @@ class chat_client {
         socket_(io_context) {
     do_connect(endpoints);
   }
-
   void init_midi() {
     midiin->openVirtualPort("test");
     midiin->ignoreTypes(false, false, false);
   }
-
   void init_callback(RtMidiIn::RtMidiCallback callbackPointer, void *client) {
     midiin->setCallback(callbackPointer, client);
   }
 
-  void write(const pt::ptree &msg) {
+  void write(const nlohmann::json &msg) {
     bool write_in_progress = !write_msgs_.empty();
-    if (write_in_progress) {
+    write_msgs_.push_back(msg);
+    if (!write_in_progress && connected) {
       do_write(write_msgs_.front());
-    } else {
-      write_msgs_.push_back(msg);
     }
   }
 
   void close() {
     boost::asio::post(io_context_, [this]() { socket_.close(); });
   }
-
- private:
   void do_connect(const tcp::resolver::results_type &endpoints) {
     boost::asio::async_connect(socket_, endpoints,
                                [this](boost::system::error_code ec, tcp::endpoint) {
                                  if (!ec) {
-                                   do_read_header();
+                                   connected = 1;
+                                   if (!write_msgs_.empty()) {
+                                     do_write(write_msgs_.front());
+                                   }
                                  }
                                });
   }
 
-  void do_read_header() {
-//    boost::asio::async_read(socket_,
-//                            boost::asio::buffer(read_msg_.data(), midi_message::header_length),
-//                            [this](boost::system::error_code ec, std::size_t /*length*/) {
-//                              if (!ec && read_msg_.decode_header()) {
-//                                do_read_body();
-//                              } else {
-//                                socket_.close();
-//                              }
-//                            });
-  }
+ private:
 
-  void do_read_body() {
-    boost::asio::async_read(socket_,
-                            boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
-                            [this](boost::system::error_code ec, std::size_t /*length*/) {
-                              if (!ec) {
-                                std::cout.write(read_msg_.body(), read_msg_.body_length());
-                                std::cout << "\n";
-                                do_read_header();
-                              } else {
-                                socket_.close();
-                              }
-                            });
-  }
-
-  int do_write(pt::ptree data) {
+  void
+  do_write(nlohmann::json data) {
+    std::string dump = data.dump();
     boost::asio::streambuf buf;
     std::ostream str(&buf);
-    pt::write_json(str, data);
-    pt::write_json(std::cout, data);
-    boost::asio::async_write(socket_,
-                             buf,
-                             [this](boost::system::error_code ec, std::size_t) {
-                               if (!ec) {
-                                 if (!write_msgs_.empty()) {
-                                   do_write(write_msgs_.front());
-                                   write_msgs_.pop_front();
-                                 }
-                               } else {
-                                 socket_.close();
-                               }
-                             });
-    return 1;
+    str << dump;
+    std::cout << dump << std::endl;
+    boost::asio::async_write(socket_, buf,
+                             boost::bind(&chat_client::handle_write, this, _1));
+    write_msgs_.pop_front();
+    if (!write_msgs_.empty()) {
+      if (write_msgs_.front()) {
+        do_write(write_msgs_.front());
+      }
+    }
+  }
+  void handle_write(const boost::system::error_code &ec) {
+    if (!ec) {
+      // Wait 10 seconds before sending the next heartbeat.
+
+    } else {
+      std::cout << "Error on heartbeat: " << ec.message() << "\n";
+    }
   }
 
  private:
   boost::asio::io_context &io_context_;
   tcp::socket socket_;
-  midi_message read_msg_;
+  int connected = 0;
   midi_message_queue write_msgs_;
   RtMidiIn *midiin = new RtMidiIn();
 };
-
 void callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
-
   int nBytes = message->size();
-  pt::ptree data;
-  pt::ptree byte_nodes;
-  pt::ptree meta_nodes;
-
-  for (int i = 0; i < nBytes; i++) {
-    std::cout << "Byte " << i << " = " << (int) message->data()[i] << ", ";
-    std::string str = "byte" + std::to_string(i);
-    std::vector<char> charStr(str.c_str(), str.c_str() + str.size() + 1);
-    byte_nodes.push_front(pt::ptree::value_type(str, std::to_string(message->data()[1])));
-  }
-
   if (nBytes > 0) {
-    std::cout << "stamp = " << deltatime << std::endl;
-    pt::ptree timestamp_node;
-    timestamp_node.put("timestamp", deltatime);
-    meta_nodes.push_back(pt::ptree::value_type("", timestamp_node));
+    nlohmann::json j;
+    for (int i = 0; i < nBytes; i++) {
+      j["bytes"][i] = (int) message->data()[i];
+    }
+    j["meta"]["timestamp"] = deltatime;
+    ((chat_client *) userData)->write(j);
   }
-  data.put_child("bytes", byte_nodes);
-  data.put_child("meta", meta_nodes);
-  ((chat_client *) userData)->write(data);
 }
 
 int main(int argc, char *argv[]) {

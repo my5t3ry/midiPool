@@ -13,7 +13,7 @@ add_executable (server
 
 add_executable (client
     client.cpp
-    RtMidi.cpp main_loop.hpp)
+    RtMidi.cpp main_loop.hpp json.h)
 
 find_package (ALSA REQUIRED)
 
