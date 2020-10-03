@@ -7,13 +7,12 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -D__LINUX_ALSA__")
 include_directories (.)
 
 add_executable (server
-    midi_message.hpp
     RtMidi.cpp
     server.cpp)
 
 add_executable (client
     client.cpp
-    RtMidi.cpp main_loop.hpp json.h)
+    RtMidi.cpp main_loop.hpp json.hpp)
 
 find_package (ALSA REQUIRED)
 

@@ -1,4 +1,3 @@
-#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <cstring>
 #include <iostream>
 #include "RtMidi.h"
@@ -6,13 +5,9 @@
 #include <thread>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include "midi_message.hpp"
 #include "main_loop.hpp"
 #include "json.hpp"
 
-
-
-// Short alias for this namespace
 
 using boost::asio::ip::tcp;
 
@@ -49,6 +44,7 @@ class chat_client {
   void close() {
     boost::asio::post(io_context_, [this]() { socket_.close(); });
   }
+
   void do_connect(const tcp::resolver::results_type &endpoints) {
     boost::asio::async_connect(socket_, endpoints,
                                [this](boost::system::error_code ec, tcp::endpoint) {
@@ -62,9 +58,7 @@ class chat_client {
   }
 
  private:
-
-  void
-  do_write(nlohmann::json data) {
+  void do_write(nlohmann::json data) {
     std::string dump = data.dump();
     boost::asio::streambuf buf;
     std::ostream str(&buf);
@@ -95,7 +89,8 @@ class chat_client {
   midi_message_queue write_msgs_;
   RtMidiIn *midiin = new RtMidiIn();
 };
-void callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
+
+void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
   int nBytes = message->size();
   if (nBytes > 0) {
     nlohmann::json j;
@@ -120,8 +115,7 @@ int main(int argc, char *argv[]) {
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     static chat_client c(io_context, endpoints);
     c.init_midi();
-    c.init_callback(&callback, &c);
-
+    c.init_callback(&midi_callback, &c);
     std::thread t([&io_context]() { io_context.run(); });
     Shutdown shutdown;
     shutdown.init();
@@ -132,6 +126,5 @@ int main(int argc, char *argv[]) {
   catch (std::exception &e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }
-
   return 0;
 }

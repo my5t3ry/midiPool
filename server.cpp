@@ -7,20 +7,20 @@
 #include <utility>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include "midi_message.hpp"
+#include "json.hpp"
 
 using boost::asio::ip::tcp;
 
 //----------------------------------------------------------------------
 
-typedef std::deque<midi_message> midi_message_queue;
+typedef std::deque<nlohmann::json> midi_message_queue;
 
 //----------------------------------------------------------------------
 
 class chat_participant {
  public:
   virtual ~chat_participant() {}
-  virtual void deliver(const midi_message &msg) = 0;
+  virtual void deliver(const nlohmann::json &msg) = 0;
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
@@ -39,7 +39,7 @@ class chat_room {
     participants_.erase(participant);
   }
 
-  void deliver(const midi_message &msg) {
+  void deliver(const nlohmann::json &msg) {
     recent_msgs_.push_back(msg);
     while (recent_msgs_.size() > max_recent_msgs)
       recent_msgs_.pop_front();
@@ -72,7 +72,7 @@ class chat_session
     do_read();
   }
 
-  void deliver(const midi_message &msg) {
+  void deliver(const nlohmann::json &msg) {
     bool write_in_progress = !write_msgs_.empty();
     write_msgs_.push_back(msg);
     if (!write_in_progress) {
@@ -101,36 +101,10 @@ class chat_session
     }
   }
 
-  void do_read_body() {
-    auto self(shared_from_this());
-    boost::system::error_code ec;
-    using namespace boost::asio;
-    std::string response;
-
-    do {
-      char buf[1024];
-      size_t bytes_transferred = socket_.receive(buffer(buf), {}, ec);
-      if (!ec) response.append(buf, buf + bytes_transferred);
-    } while (!ec);
-    std::cout << "Response received: '" << response << "'\n";
-//
-//    boost::asio::async_read(socket_,
-//                            boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
-//                            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-//                              if (!ec) {
-//                                room_.deliver(read_msg_);
-//                                do_read();
-//                              } else {
-//                                room_.leave(shared_from_this());
-//                              }
-//                            });
-  }
-
   void do_write() {
     auto self(shared_from_this());
     boost::asio::async_write(socket_,
-                             boost::asio::buffer(write_msgs_.front().data(),
-                                                 write_msgs_.front().length()),
+                             boost::asio::buffer(write_msgs_.front().dump()),
                              [this, self](boost::system::error_code ec, std::size_t /*length*/) {
                                if (!ec) {
                                  write_msgs_.pop_front();
@@ -158,7 +132,6 @@ class chat_server {
       : acceptor_(io_context, endpoint) {
     do_accept();
   }
-
  private:
   void do_accept() {
     acceptor_.async_accept(
@@ -170,12 +143,9 @@ class chat_server {
           do_accept();
         });
   }
-
   tcp::acceptor acceptor_;
   chat_room room_;
 };
-
-//----------------------------------------------------------------------
 
 int main(int argc, char *argv[]) {
   try {
@@ -183,9 +153,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Usage: chat_server <port> [<port> ...]\n";
       return 1;
     }
-
     boost::asio::io_context io_context;
-
     std::list<chat_server> servers;
     for (int i = 1; i < argc; ++i) {
       tcp::endpoint endpoint(tcp::v4(), std::atoi(argv[i]));
