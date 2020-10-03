@@ -7,9 +7,9 @@ Makefile
 *.o
 *.rc
 *.Release
-
-
 *.iml
 .idea
 server
 client
+
+cmake-build-debug
