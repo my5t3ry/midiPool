@@ -4,11 +4,27 @@
 #include <list>
 #include <memory>
 #include <set>
+#include "signal_handler.hpp"
 #include <utility>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include "json.hpp"
+#include <boost/thread.hpp>
 
+using boost::thread;
+using boost::mutex;
+
+mutex a;
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#if defined(WIN32)
+#include <windows.h>
+#define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
+#else // Unix variants
+#include <unistd.h>
+#define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
+#endif
 
 class chat_participant {
  public:
@@ -56,11 +72,21 @@ class chat_session
   chat_session(tcp::socket socket, chat_room &room)
       : socket_(std::move(socket)),
         room_(room) {
+    assign_uuid();
+  }
+  void assign_uuid() {
+    std::stringstream uuid_stream;
+    uuid_stream << boost::uuids::random_generator()();
+    uuid = uuid_stream.str();
+  }
+  const std::string &GetUuid() const {
+    return uuid;
   }
 
   void start() {
     room_.join(shared_from_this());
     do_read();
+
   }
 
   void deliver(const nlohmann::json &msg) {
@@ -75,18 +101,22 @@ class chat_session
   void do_read() {
     auto self(shared_from_this());
     boost::asio::async_read(socket_, response_,
-                            boost::asio::transfer_at_least(1),
-                            boost::bind(&chat_session::handle_read_content, this,
+                            boost::bind(&chat_session::handle_read_content, self,
                                         boost::asio::placeholders::error));
+  }
+  void resetResponse() {
+    response_.commit(response_.size());
+    do_read();
   }
 
   void handle_read_content(const boost::system::error_code &err) {
     if (!err) {
-      std::cout << &response_ << std::endl;
-      boost::asio::async_read(socket_, response_,
-                              boost::asio::transfer_at_least(1),
-                              boost::bind(&chat_session::handle_read_content, this,
-                                          boost::asio::placeholders::error));
+      std::stringstream cur_stream;
+      cur_stream << &response_;
+      std::cout << cur_stream.str() << std::endl;
+      nlohmann::json cur_message = nlohmann::json::parse(cur_stream.str());
+      resetResponse();
+      deliver(cur_message);
     } else if (err != boost::asio::error::eof) {
       std::cout << "Error: " << err << "\n";
     }
@@ -94,25 +124,83 @@ class chat_session
 
   void do_write() {
     auto self(shared_from_this());
-    boost::asio::async_write(socket_,
-                             boost::asio::buffer(write_msgs_.front().dump()),
-                             [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-                               if (!ec) {
-                                 write_msgs_.pop_front();
-                                 if (!write_msgs_.empty()) {
-                                   do_write();
-                                 }
-                               } else {
-                                 room_.leave(shared_from_this());
-                               }
-                             });
+    if (!write_msgs_.empty()) {
+      std::cout << "sending:" << write_msgs_.front().dump();
+      boost::asio::async_write(socket_, boost::asio::buffer(write_msgs_.front().dump(),
+                                                            write_msgs_.front().dump().size()),
+                               boost::bind(&chat_session::handle_write, self,
+                                           boost::asio::placeholders::error));
+    }
+  }
+
+  void handle_write(const boost::system::error_code &ec) {
+    if (!ec) {
+      write_msgs_.pop_front();
+      if (!write_msgs_.empty()) {
+        SLEEP(30);
+        do_write();
+      }
+    } else {
+      std::cout << "Error on heartbeat: " << ec.message() << "\n";
+    }
   }
 
   tcp::socket socket_;
   chat_room &room_;
   boost::asio::streambuf response_;
+  std::string uuid;
   midi_message_queue write_msgs_;
 };
+
+void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
+  a.lock();
+  int k = 0, j = 0;
+  std::cout << "Generating clock at "
+            << (60.0 / 24.0 / sleep_ms * 1000.0)
+            << " BPM." << std::endl;
+
+  // Send out a series of MIDI clock messages.
+  // MIDI start
+  nlohmann::json message;
+  message["bytes"][0] = 0xFA;
+  message["meta"]["uuid"] = session->GetUuid();
+
+  std::cout << "MIDI start" << std::endl;
+  session->deliver(message);
+
+  for (j = 0; j < 2; j++) {
+    if (j > 0) {
+      // MIDI continue
+      nlohmann::json message;
+      message["bytes"][0] = 0xFB;
+      message["meta"]["uuid"] = session->GetUuid();
+      session->deliver(message);
+      std::cout << "MIDI continue" << std::endl;
+    }
+
+    for (k = 0; k < 96; k++) {
+      // MIDI clock
+      nlohmann::json message;
+      message["bytes"][0] = 0xF8;
+      message["meta"]["uuid"] = session->GetUuid();
+
+      session->deliver(message);
+      if (k % 24 == 0)
+        std::cout << "MIDI clock (one beat)" << std::endl;
+      SLEEP(sleep_ms);
+    }
+
+    // MIDI stop
+    nlohmann::json message;
+    message["bytes"][0] = 0xFC;
+    message["meta"]["uuid"] = session->GetUuid();
+
+    session->deliver(message);
+    std::cout << "MIDI stop" << std::endl;
+    SLEEP(500);
+  }
+  a.unlock();
+}
 
 class chat_server {
  public:
@@ -126,9 +214,10 @@ class chat_server {
     acceptor_.async_accept(
         [this](boost::system::error_code ec, tcp::socket socket) {
           if (!ec) {
-            std::make_shared<chat_session>(std::move(socket), room_)->start();
+            const std::shared_ptr<chat_session> &session = std::make_shared<chat_session>(std::move(socket), room_);
+            thread *midiThread = new thread(midiClock, 60, session);
+            session->start();
           }
-
           do_accept();
         });
   }
@@ -143,6 +232,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     boost::asio::io_context io_context;
+
     std::list<chat_server> servers;
     for (int i = 1; i < argc; ++i) {
       tcp::endpoint endpoint(tcp::v4(), std::atoi(argv[i]));
