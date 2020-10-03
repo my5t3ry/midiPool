@@ -10,12 +10,7 @@
 #include "json.hpp"
 
 using boost::asio::ip::tcp;
-
-//----------------------------------------------------------------------
-
 typedef std::deque<nlohmann::json> midi_message_queue;
-
-//----------------------------------------------------------------------
 
 class chat_participant {
  public:
@@ -24,8 +19,6 @@ class chat_participant {
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
-
-//----------------------------------------------------------------------
 
 class chat_room {
  public:
@@ -55,8 +48,6 @@ class chat_room {
   };
   midi_message_queue recent_msgs_;
 };
-
-//----------------------------------------------------------------------
 
 class chat_session
     : public chat_participant,
@@ -122,8 +113,6 @@ class chat_session
   boost::asio::streambuf response_;
   midi_message_queue write_msgs_;
 };
-
-//----------------------------------------------------------------------
 
 class chat_server {
  public:

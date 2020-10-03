@@ -1,4 +1,3 @@
-#include <cstring>
 #include <iostream>
 #include "RtMidi.h"
 #include <deque>
@@ -8,13 +7,11 @@
 #include "signal_handler.hpp"
 #include "json.hpp"
 
-
-using boost::asio::ip::tcp;
-
 enum {
   max_length = 1024
 };
 
+using boost::asio::ip::tcp;
 typedef std::deque<nlohmann::json> midi_message_queue;
 
 class chat_client {
@@ -76,7 +73,6 @@ class chat_client {
   void handle_write(const boost::system::error_code &ec) {
     if (!ec) {
       // Wait 10 seconds before sending the next heartbeat.
-
     } else {
       std::cout << "Error on heartbeat: " << ec.message() << "\n";
     }
@@ -108,9 +104,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Usage: chat_client <host> <port>\n";
       return 1;
     }
-
     boost::asio::io_context io_context;
-
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     static chat_client c(io_context, endpoints);
