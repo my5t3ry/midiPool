@@ -1,3 +1,4 @@
+#define BOOST_BIND_GLOBAL_PLACEHOLDERS
 #include <cstring>
 #include <iostream>
 #include "RtMidi.h"
@@ -5,6 +6,13 @@
 #include <thread>
 #include <boost/asio.hpp>
 #include "midi_message.hpp"
+#include "main_loop.hpp"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
+
+// Short alias for this namespace
+namespace pt = boost::property_tree;
 
 using boost::asio::ip::tcp;
 
@@ -12,19 +20,7 @@ enum {
   max_length = 1024
 };
 
-
-using boost::asio::ip::tcp;
-
-typedef std::deque<midi_message> midi_message_queue;
-
-void callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
-
-  unsigned int nBytes = message->size();
-  for (unsigned int i = 0; i < nBytes; i++)
-    std::cout << "Byte " << i << " = " << (int) message->at(i) << ", ";
-  if (nBytes > 0)
-    std::cout << "stamp = " << deltatime << std::endl;
-}
+typedef std::deque<pt::ptree> midi_message_queue;
 
 class chat_client {
  public:
@@ -36,16 +32,7 @@ class chat_client {
   }
 
   void init_midi() {
-    // Check available ports.
-    unsigned int nPorts = midiin->getPortCount();
-    if (nPorts == 0) {
-      std::cout << "No ports available!\n";
-    }
     midiin->openVirtualPort("test");
-    // Set our callback function.  This should be done immediately after
-    // opening the port to avoid having incoming messages written to the
-    // queue.
-    // Don't ignore sysex, timing, or active sensing messages.
     midiin->ignoreTypes(false, false, false);
   }
 
@@ -53,15 +40,13 @@ class chat_client {
     midiin->setCallback(callbackPointer, client);
   }
 
-  void write(const midi_message &msg) {
-    boost::asio::post(io_context_,
-                      [this, msg]() {
-                        bool write_in_progress = !write_msgs_.empty();
-                        write_msgs_.push_back(msg);
-                        if (!write_in_progress) {
-                          do_write();
-                        }
-                      });
+  void write(const pt::ptree &msg) {
+    bool write_in_progress = !write_msgs_.empty();
+    if (write_in_progress) {
+      do_write(write_msgs_.front());
+    } else {
+      write_msgs_.push_back(msg);
+    }
   }
 
   void close() {
@@ -79,15 +64,15 @@ class chat_client {
   }
 
   void do_read_header() {
-    boost::asio::async_read(socket_,
-                            boost::asio::buffer(read_msg_.data(), midi_message::header_length),
-                            [this](boost::system::error_code ec, std::size_t /*length*/) {
-                              if (!ec && read_msg_.decode_header()) {
-                                do_read_body();
-                              } else {
-                                socket_.close();
-                              }
-                            });
+//    boost::asio::async_read(socket_,
+//                            boost::asio::buffer(read_msg_.data(), midi_message::header_length),
+//                            [this](boost::system::error_code ec, std::size_t /*length*/) {
+//                              if (!ec && read_msg_.decode_header()) {
+//                                do_read_body();
+//                              } else {
+//                                socket_.close();
+//                              }
+//                            });
   }
 
   void do_read_body() {
@@ -104,20 +89,24 @@ class chat_client {
                             });
   }
 
-  void do_write() {
+  int do_write(pt::ptree data) {
+    boost::asio::streambuf buf;
+    std::ostream str(&buf);
+    pt::write_json(str, data);
+    pt::write_json(std::cout, data);
     boost::asio::async_write(socket_,
-                             boost::asio::buffer(write_msgs_.front().data(),
-                                                 write_msgs_.front().length()),
-                             [this](boost::system::error_code ec, std::size_t /*length*/) {
+                             buf,
+                             [this](boost::system::error_code ec, std::size_t) {
                                if (!ec) {
-                                 write_msgs_.pop_front();
                                  if (!write_msgs_.empty()) {
-                                   do_write();
+                                   do_write(write_msgs_.front());
+                                   write_msgs_.pop_front();
                                  }
                                } else {
                                  socket_.close();
                                }
                              });
+    return 1;
   }
 
  private:
@@ -128,8 +117,32 @@ class chat_client {
   RtMidiIn *midiin = new RtMidiIn();
 };
 
-int main(int argc, char *argv[]) {
+void callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
 
+  int nBytes = message->size();
+  pt::ptree data;
+  pt::ptree byte_nodes;
+  pt::ptree meta_nodes;
+
+  for (int i = 0; i < nBytes; i++) {
+    std::cout << "Byte " << i << " = " << (int) message->data()[i] << ", ";
+    std::string str = "byte" + std::to_string(i);
+    std::vector<char> charStr(str.c_str(), str.c_str() + str.size() + 1);
+    byte_nodes.push_front(pt::ptree::value_type(str, std::to_string(message->data()[1])));
+  }
+
+  if (nBytes > 0) {
+    std::cout << "stamp = " << deltatime << std::endl;
+    pt::ptree timestamp_node;
+    timestamp_node.put("timestamp", deltatime);
+    meta_nodes.push_back(pt::ptree::value_type("", timestamp_node));
+  }
+  data.put_child("bytes", byte_nodes);
+  data.put_child("meta", meta_nodes);
+  ((chat_client *) userData)->write(data);
+}
+
+int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "Usage: chat_client <host> <port>\n";
@@ -145,18 +158,11 @@ int main(int argc, char *argv[]) {
     c.init_callback(&callback, &c);
 
     std::thread t([&io_context]() { io_context.run(); });
-
-    char line[midi_message::max_body_length + 1];
-    while (std::cin.getline(line, midi_message::max_body_length + 1)) {
-      midi_message msg;
-      msg.body_length(std::strlen(line));
-      std::memcpy(msg.body(), line, msg.body_length());
-      msg.encode_header();
-      c.write(msg);
+    Shutdown shutdown;
+    shutdown.init();
+    while (true) {
+      sleep(1);
     }
-
-    c.close();
-    t.join();
   }
   catch (std::exception &e) {
     std::cerr << "Exception: " << e.what() << "\n";

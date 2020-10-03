@@ -13,14 +13,14 @@ add_executable (server
 
 add_executable (client
     client.cpp
-    RtMidi.cpp)
+    RtMidi.cpp main_loop.hpp)
 
 find_package (ALSA REQUIRED)
 
 message (WARNING "libasound found: ${ALSA_FOUND}")
 include_directories (${ALSA_INCLUDE_DIRS})
-target_link_libraries (client ${ALSA_LIBRARIES} pthread)
-target_link_libraries (server ${ALSA_LIBRARIES} pthread)
+target_link_libraries (client ${ALSA_LIBRARIES} pthread boost_thread)
+target_link_libraries (server ${ALSA_LIBRARIES} pthread boost_thread)
 
 #
 #TARGET_LINK_LIBRARIES(server

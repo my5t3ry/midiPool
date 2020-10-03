@@ -95,16 +95,28 @@ class chat_session
 
   void do_read_body() {
     auto self(shared_from_this());
-    boost::asio::async_read(socket_,
-                            boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
-                            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-                              if (!ec) {
-                                room_.deliver(read_msg_);
-                                do_read_header();
-                              } else {
-                                room_.leave(shared_from_this());
-                              }
-                            });
+    boost::system::error_code ec;
+    using namespace boost::asio;
+    std::string response;
+
+
+    do {
+      char buf[1024];
+      size_t bytes_transferred = socket_.receive(buffer(buf), {}, ec);
+      if (!ec) response.append(buf, buf + bytes_transferred);
+    } while (!ec);
+    std::cout << "Response received: '" << response << "'\n";
+//
+//    boost::asio::async_read(socket_,
+//                            boost::asio::buffer(read_msg_.body(), read_msg_.body_length()),
+//                            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
+//                              if (!ec) {
+//                                room_.deliver(read_msg_);
+//                                do_read_header();
+//                              } else {
+//                                room_.leave(shared_from_this());
+//                              }
+//                            });
   }
 
   void do_write() {
