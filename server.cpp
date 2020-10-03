@@ -6,6 +6,7 @@
 #include <set>
 #include <utility>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include "midi_message.hpp"
 
 using boost::asio::ip::tcp;
@@ -68,7 +69,7 @@ class chat_session
 
   void start() {
     room_.join(shared_from_this());
-    do_read_header();
+    do_read();
   }
 
   void deliver(const midi_message &msg) {
@@ -80,17 +81,24 @@ class chat_session
   }
 
  private:
-  void do_read_header() {
+  void do_read() {
     auto self(shared_from_this());
-    boost::asio::async_read(socket_,
-                            boost::asio::buffer(read_msg_.data(), midi_message::header_length),
-                            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
-                              if (!ec && read_msg_.decode_header()) {
-                                do_read_body();
-                              } else {
-                                room_.leave(shared_from_this());
-                              }
-                            });
+    boost::asio::async_read(socket_, response_,
+                            boost::asio::transfer_at_least(1),
+                            boost::bind(&chat_session::handle_read_content, this,
+                                        boost::asio::placeholders::error));
+  }
+
+  void handle_read_content(const boost::system::error_code &err) {
+    if (!err) {
+      std::cout << &response_ << std::endl;
+      boost::asio::async_read(socket_, response_,
+                              boost::asio::transfer_at_least(1),
+                              boost::bind(&chat_session::handle_read_content, this,
+                                          boost::asio::placeholders::error));
+    } else if (err != boost::asio::error::eof) {
+      std::cout << "Error: " << err << "\n";
+    }
   }
 
   void do_read_body() {
@@ -98,7 +106,6 @@ class chat_session
     boost::system::error_code ec;
     using namespace boost::asio;
     std::string response;
-
 
     do {
       char buf[1024];
@@ -112,7 +119,7 @@ class chat_session
 //                            [this, self](boost::system::error_code ec, std::size_t /*length*/) {
 //                              if (!ec) {
 //                                room_.deliver(read_msg_);
-//                                do_read_header();
+//                                do_read();
 //                              } else {
 //                                room_.leave(shared_from_this());
 //                              }
@@ -138,7 +145,7 @@ class chat_session
 
   tcp::socket socket_;
   chat_room &room_;
-  midi_message read_msg_;
+  boost::asio::streambuf response_;
   midi_message_queue write_msgs_;
 };
 
