@@ -10,6 +10,25 @@
 #include <boost/bind.hpp>
 #include "json.hpp"
 #include <boost/thread.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/asio/write.hpp>
+
+using boost::asio::ip::tcp;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::redirect_error;
+using boost::asio::use_awaitable;
+
 
 using boost::thread;
 using boost::mutex;
@@ -91,6 +110,7 @@ class chat_session
     write_msgs_.push_back(msg);
     if (!write_in_progress) {
       do_write();
+      SLEEP(50);
     }
   }
  private:
@@ -120,7 +140,7 @@ class chat_session
   void do_write() {
     auto self(shared_from_this());
     if (!write_msgs_.empty()) {
-      std::cout << "sending:" << write_msgs_.front().dump();
+//      std::cout << "sending:" << write_msgs_.front().dump();
       boost::asio::async_write(socket_, boost::asio::buffer(write_msgs_.front().dump(),
                                                             write_msgs_.front().dump().size()),
                                boost::bind(&chat_session::handle_write, self,
@@ -147,22 +167,28 @@ class chat_session
 
 void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
   a.lock();
-  int k = 0, j = 0;
+  int k = 0, four_bars = 0;
   std::cout << "Generating clock at "
             << (60.0 / 24.0 / sleep_ms * 1000.0)
             << " BPM." << std::endl;
 
   // Send out a series of MIDI clock messages.
   // MIDI start
-  nlohmann::json message;
-  message["bytes"][0] = 0xFA;
-  message["meta"]["uuid"] = session->GetUuid();
-
-  std::cout << "MIDI start" << std::endl;
-  session->deliver(message);
-
+  int num_four_bars = 8;
   while (true) {
-    if (j > 0) {
+    if (four_bars == num_four_bars) {
+      nlohmann::json message;
+      message["bytes"][0] = 0xFA;
+      message["meta"]["uuid"] = session->GetUuid();
+      std::cout << "MIDI start" << std::endl;
+      session->deliver(message);
+      four_bars = 0;
+      message["bytes"][0] = 0xFC;
+      message["meta"]["uuid"] = session->GetUuid();
+      session->deliver(message);
+      std::cout << "MIDI stop" << std::endl;
+    }
+    if (four_bars > 0) {
       // MIDI continue
       nlohmann::json message;
       message["bytes"][0] = 0xFB;
@@ -183,10 +209,8 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
       SLEEP(sleep_ms);
     }
     nlohmann::json message;
-    message["bytes"][0] = 0xFC;
-    message["meta"]["uuid"] = session->GetUuid();
-    session->deliver(message);
-    std::cout << "MIDI stop" << std::endl;
+
+    four_bars = four_bars + 1;
     SLEEP(500);
   }
   a.unlock();
@@ -205,7 +229,7 @@ class chat_server {
         [this](boost::system::error_code ec, tcp::socket socket) {
           if (!ec) {
             const std::shared_ptr<chat_session> &session = std::make_shared<chat_session>(std::move(socket), room_);
-            thread *midiThread = new thread(midiClock, 60, session);
+            thread *midiThread = new thread(midiClock, 25, session);
             session->start();
           }
           do_accept();
