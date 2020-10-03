@@ -5,7 +5,7 @@
 #include <thread>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include "main_loop.hpp"
+#include "signal_handler.hpp"
 #include "json.hpp"
 
 
@@ -117,8 +117,8 @@ int main(int argc, char *argv[]) {
     c.init_midi();
     c.init_callback(&midi_callback, &c);
     std::thread t([&io_context]() { io_context.run(); });
-    Shutdown shutdown;
-    shutdown.init();
+    signal_handler signal_handler;
+    signal_handler.init();
     while (true) {
       sleep(1);
     }

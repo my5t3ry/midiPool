@@ -8,9 +8,9 @@
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
 
-class Shutdown {
+class signal_handler {
  public:
-  Shutdown() : is_signal_received_(false) {
+  signal_handler() : is_signal_received_(false) {
     //signals_::remove();
     std::cout << "constructor" << std::endl;
   }
@@ -18,7 +18,7 @@ class Shutdown {
   void init() {
     std::cout << "Init " << std::endl;
     boost::asio::signal_set signals(signalService_, SIGINT, SIGTERM, SIGQUIT);
-    signals.async_wait(&Shutdown::handleStop);
+    signals.async_wait(&signal_handler::handleStop);
     boost::thread signalThread(boost::bind(&boost::asio::io_service::run, &signalService_));
     std::cout << "Init Completed" << std::endl;
   }
@@ -39,6 +39,5 @@ class Shutdown {
       exit(0);
     }
   }
-
 };
 
