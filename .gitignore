@@ -11,3 +11,5 @@ Makefile
 
 *.iml
 .idea
+server
+client
