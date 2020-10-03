@@ -168,7 +168,7 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
   std::cout << "MIDI start" << std::endl;
   session->deliver(message);
 
-  for (j = 0; j < 2; j++) {
+  while (true) {
     if (j > 0) {
       // MIDI continue
       nlohmann::json message;

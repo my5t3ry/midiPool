@@ -1,16 +1,12 @@
 #include <iostream>
 #include "RtMidi.h"
 #include <deque>
-#include <thread>
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include "signal_handler.hpp"
 #include "json.hpp"
-#include <utility>
 #include <memory>
-#include <list>
 
-#include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
