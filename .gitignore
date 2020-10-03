@@ -11,5 +11,4 @@ Makefile
 .idea
 server
 client
-
 cmake-build-debug
