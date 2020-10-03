@@ -9,8 +9,6 @@
 #include <boost/bind.hpp>
 #include "json.hpp"
 
-using boost::asio::ip::tcp;
-typedef std::deque<nlohmann::json> midi_message_queue;
 
 class chat_participant {
  public:
@@ -18,6 +16,8 @@ class chat_participant {
   virtual void deliver(const nlohmann::json &msg) = 0;
 };
 
+using boost::asio::ip::tcp;
+typedef std::deque<nlohmann::json> midi_message_queue;
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
 class chat_room {
