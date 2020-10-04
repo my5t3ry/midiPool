@@ -17,8 +17,8 @@
 ##### technologies
 
 - https://www.boost.org. c++, crosscompiling, lightweight, async tcp sockets, latest threading/async/coroutine clang features, static linked binaries probably possible
-- rtaudio/rtmidi. crossplatform layer. portaudio/asio/alsa/core audio support
+- https://github.com/thestk/rtmidi /rtaudio crossplatform layer. portaudio/asio/alsa/core audio support
 - json/?protobuf. simple msg datastructures. midi messages generated on client side
 - https://roc-streaming.org FECFRAME/RTP network audio streaming. c library, lightweight, crosscompiling
-- dpf/nanovg. vst client intergration
+- https://github.com/thestk/rtmidi /nanovg. vst client intergration
 - udp hole punching. configuration free accessibility for noobs
