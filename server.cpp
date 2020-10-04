@@ -211,7 +211,7 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
     nlohmann::json message;
 
     four_bars = four_bars + 1;
-    SLEEP(500);
+//    SLEEP(500);
   }
   a.unlock();
 }

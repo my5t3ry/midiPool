@@ -100,12 +100,14 @@ class chat_client :
                                                                boost::asio::dynamic_buffer(read_msg, 1024),
                                                                "\n",
                                                                use_awaitable);
-        nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
-        std::cout << cur_message.dump() << std::endl;
-        std::vector<unsigned char> message;
-        message.clear();
-        message.push_back(cur_message["bytes"][0]);
-        midiout->sendMessage(&message);
+        if (n > 1) {
+          nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
+//          std::cout << cur_message.dump() << std::endl;
+          std::vector<unsigned char> message;
+          message.clear();
+          message.push_back(cur_message["bytes"][0]);
+          midiout->sendMessage(&message);
+        }
         read_msg.erase(0, n);
         SLEEP(10);
       }
