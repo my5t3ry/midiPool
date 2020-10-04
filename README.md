@@ -1,8 +1,8 @@
-#midiPool 
+# midiPool 
 
-###another attempt to build a midi/(audio) over tcp protocol. 
+### another attempt to build a midi/(audio) over tcp protocol. 
 
-#####long term/no term goals 
+##### long term/no term goals 
 
 - [ ] stable enough that it's usable for online jam sessions
 - [X] server/client architecture
@@ -14,7 +14,7 @@
 - [|] client spawns virtual audio devices (send/recv.). audio output of all users is send too the server, and returned too the audio input device of all clients.
 - [ ] audi mixer interface for clients 
 
-#####technologies
+##### technologies
 
 - https://www.boost.org. c++, crosscompiling, lightweight, async tcp sockets, latest threading/async/coroutine clang features, static linked binaries probably possible
 - rtaudio/rtmidi. crossplatform layer. portaudio/asio/alsa/core audio support
