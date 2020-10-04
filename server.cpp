@@ -108,7 +108,7 @@ class chat_session
         }
       }
       catch (std::exception &e) {
-        LOG(DEBUG) << e.what();
+        LOG(ERROR) << e.what();
         stop();
       }
     }
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    LOG(DEBUG) << "Exception: " << e.what() << "\n";
+    LOG(ERROR) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }

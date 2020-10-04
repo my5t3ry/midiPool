@@ -82,7 +82,7 @@ class chat_client :
                                                                use_awaitable);
         if (n > 0) {
           nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
-          LOG(DEBUG) << cur_message.dump() ;
+          LOG(DEBUG) << cur_message.dump();
           std::vector<unsigned char> message;
           message.clear();
           message.push_back(cur_message["bytes"][0]);
@@ -91,8 +91,8 @@ class chat_client :
           SLEEP(10);
         }
       } catch (std::exception &e) {
-        LOG(DEBUG) << e.what();
-//        stop();
+        LOG(ERROR) << e.what();
+        //        stop();
       }
     }
   }
@@ -109,7 +109,8 @@ class chat_client :
       }
       writing = 0;
     }
-    catch (std::exception &) {
+    catch (std::exception &e) {
+      LOG(ERROR) << e.what();
       stop();
     }
   }
@@ -163,7 +164,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    LOG(DEBUG) << "Exception: " << e.what() << "\n";
+    LOG(ERROR) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }
