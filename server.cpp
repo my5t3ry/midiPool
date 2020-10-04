@@ -242,8 +242,6 @@ awaitable<void> listener(tcp::acceptor acceptor) {
   }
 }
 
-//----------------------------------------------------------------------
-
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {

@@ -9,19 +9,38 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/detached.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/read_until.hpp>
+#include <boost/asio/redirect_error.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <boost/asio/write.hpp>
+
 enum {
   max_length = 1024
 };
 
 using boost::asio::ip::tcp;
+
+using boost::asio::ip::tcp;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::redirect_error;
+using boost::asio::use_awaitable;
 typedef std::deque<nlohmann::json> midi_message_queue;
 
 class chat_client {
  public:
   chat_client(boost::asio::io_context &io_context,
               const tcp::resolver::results_type &endpoints)
-      : io_context_(io_context),
-        socket_(io_context) {
+      : socket_(io_context),
+        timer_(socket_.get_executor()) {
     assign_uuid();
     do_connect(endpoints);
   }
@@ -29,6 +48,9 @@ class chat_client {
     std::stringstream uuid_stream;
     uuid_stream << boost::uuids::random_generator()();
     uuid = uuid_stream.str();
+  }
+  const std::string &GetUuid() const {
+    return uuid;
   }
   void init_midi() {
     midiin->openVirtualPort("midiPool send");
@@ -41,87 +63,71 @@ class chat_client {
   }
 
   void write(const nlohmann::json &msg) {
-    bool write_in_progress = !write_msgs_.empty();
     write_msgs_.push_back(msg);
-    if (!write_in_progress && connected) {
-      do_write();
-    }
-  }
-
-  void close() {
-    boost::asio::post(io_context_, [this]() { socket_.close(); });
   }
 
   void do_connect(const tcp::resolver::results_type &endpoints) {
     boost::asio::async_connect(socket_, endpoints,
                                [this](boost::system::error_code ec, tcp::endpoint) {
                                  if (!ec) {
-                                   connected = 1;
-                                   if (!write_msgs_.empty()) {
-                                     do_write();
-                                   }
-                                   do_read();
+                                   co_spawn(socket_.get_executor(),
+                                            reader(),
+                                            detached);
+
+                                   co_spawn(socket_.get_executor(),
+                                            writer(),
+                                            detached);
                                  }
                                });
   }
 
-  void do_read() {
-    boost::asio::async_read(socket_, response_,
-                            boost::asio::transfer_at_least(1),
-                            boost::bind(&chat_client::handle_read_content, this,
-                                        boost::asio::placeholders::error));
-  }
-
-  void resetResponse() {
-    response_.commit(response_.size());
-  }
-
-  void handle_read_content(const boost::system::error_code &err) {
-    if (!err) {
-      auto data = response_.data();
-      std::string str(boost::asio::buffers_begin(data),
-                      boost::asio::buffers_begin(data) + data.size());
-      response_.consume(data.size());
-      std::cout << "response" << str << std::endl;
-      nlohmann::json cur_message = nlohmann::json::parse(str);
-      std::cout << "response received uuid:" << cur_message["meta"]["uuid"];
-      std::vector<unsigned char> message;
-      message.clear();
-      message.push_back(cur_message["bytes"][0]);
-      midiout->sendMessage(&message);
-      std::cout << "MIDI start" << std::endl;
-      do_read();
-    } else if (err != boost::asio::error::eof) {
-      std::cout << "Error: " << err << "\n";
+  awaitable<void> reader() {
+    try {
+      for (std::string read_msg;;) {
+        std::size_t n = co_await boost::asio::async_read_until(socket_,
+                                                               boost::asio::dynamic_buffer(read_msg, 1024),
+                                                               "\n",
+                                                               use_awaitable);
+        nlohmann::json cur_message = nlohmann::json::parse(read_msg.data());
+        std::vector<unsigned char> message;
+        message.clear();
+        message.push_back(cur_message["bytes"][0]);
+        midiout->sendMessage(&message);
+        std::cout << "MIDI start" << std::endl;
+        read_msg.erase(0, n);
+      }
+    }
+    catch (std::exception &) {
+      stop();
     }
   }
-  const std::string &GetUuid() const {
-    return uuid;
+
+  awaitable<void> writer() {
+    try {
+      while (socket_.is_open()) {
+        if (write_msgs_.empty()) {
+          boost::system::error_code ec;
+          co_await timer_.async_wait(redirect_error(use_awaitable, ec));
+        } else {
+          co_await boost::asio::async_write(socket_,
+                                            boost::asio::buffer(write_msgs_.front().dump()), use_awaitable);
+
+          write_msgs_.pop_front();
+        }
+      }
+    }
+    catch (std::exception &) {
+      stop();
+    }
+  }
+
+  void stop() {
+    socket_.close();
   }
  private:
-  void do_write() {
-    boost::asio::async_write(socket_, boost::asio::buffer(write_msgs_.front().dump(),
-                                                          write_msgs_.front().dump().size()),
-                             boost::bind(&chat_client::handle_write, this, _1));
-    write_msgs_.pop_front();
-    if (!write_msgs_.empty()) {
-      do_write();
-    }
-  }
-  void handle_write(const boost::system::error_code &ec) {
-    if (!ec) {
-      // Wait 10 seconds before sending the next heartbeat.
-    } else {
-      std::cout << "Error on heartbeat: " << ec.message() << "\n";
-    }
-  }
-
- private:
-  boost::asio::io_context &io_context_;
   tcp::socket socket_;
-  int connected = 0;
+  boost::asio::steady_timer timer_;
   std::string uuid;
-  boost::asio::streambuf response_;
   midi_message_queue write_msgs_;
   RtMidiIn *midiin = new RtMidiIn();
   RtMidiOut *midiout = new RtMidiOut();
@@ -147,12 +153,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "Usage: chat_client <host> <port>\n";
       return 1;
     }
-    boost::asio::io_context io_context;
+
+    boost::asio::io_context io_context(1);
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     static chat_client c(io_context, endpoints);
     c.init_midi();
     c.init_callback(&midi_callback, &c);
+    boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
+    signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
   }
   catch (std::exception &e) {
