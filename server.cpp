@@ -2,12 +2,10 @@
 #include <cstdlib>
 #include <deque>
 #include <iostream>
-#include <list>
 #include <memory>
 #include <set>
 #include "json.hpp"
 
-#include <string>
 #include <utility>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/detached.hpp>
@@ -50,7 +48,7 @@ using boost::asio::use_awaitable;
 class chat_participant {
  public:
   virtual ~chat_participant() {}
-  virtual void deliver(const std::string &msg) = 0;
+  virtual void deliver(nlohmann::json &msg) = 0;
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
@@ -63,15 +61,15 @@ class chat_room {
  public:
   void join(chat_participant_ptr participant) {
     participants_.insert(participant);
-    for (auto msg: recent_msgs_)
-      participant->deliver(msg);
+//    for (auto msg: recent_msgs_)
+//      participant->deliver(msg);
   }
 
   void leave(chat_participant_ptr participant) {
     participants_.erase(participant);
   }
 
-  void deliver(const std::string &msg) {
+  void deliver(nlohmann::json msg) {
     recent_msgs_.push_back(msg);
     while (recent_msgs_.size() > max_recent_msgs)
       recent_msgs_.pop_front();
@@ -101,7 +99,7 @@ class chat_session
 
   void start() {
     room_.join(shared_from_this());
-
+    assign_uuid();
     co_spawn(socket_.get_executor(),
              [self = shared_from_this()] { return self->reader(); },
              detached);
@@ -119,7 +117,7 @@ class chat_session
     return uuid;
   }
 
-  void deliver(const std::string &msg) {
+  void deliver(nlohmann::json &msg) {
     write_msgs_.push_back(msg);
     timer_.cancel_one();
   }
@@ -152,7 +150,8 @@ class chat_session
         } else {
           co_await boost::asio::async_write(socket_,
                                             boost::asio::buffer(write_msgs_.front().dump()), use_awaitable);
-
+          co_await boost::asio::async_write(socket_,
+                                            boost::asio::buffer("\n"), use_awaitable);
           write_msgs_.pop_front();
         }
       }
