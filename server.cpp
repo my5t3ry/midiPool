@@ -23,10 +23,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/thread.hpp>
 
-using boost::thread;
-using boost::mutex;
-
-mutex a;
 
 #if defined(WIN32)
 #include <windows.h>
@@ -36,14 +32,16 @@ mutex a;
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
+
+mutex a;
+using boost::thread;
+using boost::mutex;
 using boost::asio::ip::tcp;
 using boost::asio::awaitable;
 using boost::asio::co_spawn;
 using boost::asio::detached;
 using boost::asio::redirect_error;
 using boost::asio::use_awaitable;
-
-//----------------------------------------------------------------------
 
 class chat_participant {
  public:
@@ -52,10 +50,6 @@ class chat_participant {
 };
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
-
-//----------------------------------------------------------------------
-
-
 
 class chat_room {
  public:
@@ -83,8 +77,6 @@ class chat_room {
   enum { max_recent_msgs = 100 };
   std::deque<std::string> recent_msgs_;
 };
-
-//----------------------------------------------------------------------
 
 class chat_session
     : public chat_participant,
@@ -182,8 +174,6 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
             << (60.0 / 24.0 / sleep_ms * 1000.0)
             << " BPM." << std::endl;
 
-  // Send out a series of MIDI clock messages.
-  // MIDI start
   int num_four_bars = 8;
   while (true) {
     if (four_bars == num_four_bars) {
@@ -226,11 +216,8 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
   a.unlock();
 }
 
-//----------------------------------------------------------------------
-
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
-
   for (;;) {
     const std::shared_ptr<chat_session> &session = std::make_shared<chat_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -247,20 +234,15 @@ int main(int argc, char *argv[]) {
       std::cerr << "Usage: chat_server <port> [<port> ...]\n";
       return 1;
     }
-
     boost::asio::io_context io_context(1);
-
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
-
       co_spawn(io_context,
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
-
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
-
     io_context.run();
   }
   catch (std::exception &e) {
