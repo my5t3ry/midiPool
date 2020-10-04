@@ -93,28 +93,28 @@ class chat_client :
   }
 
   awaitable<void> reader() {
-    try {
-      while (socket_.is_open()) {
+    while (socket_.is_open()) {
+      try {
         std::string read_msg;
         std::size_t n = co_await boost::asio::async_read_until(socket_,
-                                                               boost::asio::dynamic_buffer(read_msg, 1024),
+                                                               boost::asio::dynamic_buffer(read_msg, 2048),
                                                                "\n",
                                                                use_awaitable);
-        if (n > 1) {
+        if (n > 0) {
           nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
 //          std::cout << cur_message.dump() << std::endl;
           std::vector<unsigned char> message;
           message.clear();
           message.push_back(cur_message["bytes"][0]);
           midiout->sendMessage(&message);
+          read_msg.erase(0, n);
+          SLEEP(10);
+
         }
-        read_msg.erase(0, n);
-        SLEEP(10);
+      } catch (std::exception &e) {
+        std::cerr << e.what();
+//        stop();
       }
-    }
-    catch (std::exception &e) {
-      std::cerr << e.what();
-      stop();
     }
   }
 

@@ -23,7 +23,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/thread.hpp>
 
-
 #if defined(WIN32)
 #include <windows.h>
 #define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
@@ -31,8 +30,6 @@
 #include <unistd.h>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
-
-
 
 using boost::thread;
 using boost::mutex;
@@ -146,6 +143,7 @@ class chat_session
           co_await boost::asio::async_write(socket_,
                                             boost::asio::buffer("\n"), use_awaitable);
           write_msgs_.pop_front();
+          SLEEP(20);
         }
       }
     }
@@ -186,7 +184,7 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
       message["bytes"][0] = 0xFC;
       message["meta"]["uuid"] = session->GetUuid();
       session->deliver(message);
-      std::cout << "MIDI stop" << std::endl;
+//      std::cout << "MIDI stop" << std::endl;
     }
     if (four_bars > 0) {
       // MIDI continue
@@ -194,7 +192,7 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
       message["bytes"][0] = 0xFB;
       message["meta"]["uuid"] = session->GetUuid();
       session->deliver(message);
-      std::cout << "MIDI continue" << std::endl;
+//      std::cout << "MIDI continue" << std::endl;
     }
 
     for (k = 0; k < 96; k++) {
@@ -205,8 +203,8 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
 
       session->deliver(message);
       if (k % 24 == 0)
-        std::cout << "MIDI clock (one beat)" << std::endl;
-      SLEEP(sleep_ms);
+//        std::cout << "MIDI clock (one beat)" << std::endl;
+        SLEEP(sleep_ms);
     }
     nlohmann::json message;
 
