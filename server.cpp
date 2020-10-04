@@ -33,7 +33,7 @@
 #endif
 
 
-mutex a;
+
 using boost::thread;
 using boost::mutex;
 using boost::asio::ip::tcp;
@@ -42,6 +42,7 @@ using boost::asio::co_spawn;
 using boost::asio::detached;
 using boost::asio::redirect_error;
 using boost::asio::use_awaitable;
+mutex a;
 
 class chat_participant {
  public:
@@ -163,7 +164,6 @@ class chat_session
   boost::asio::steady_timer timer_;
   chat_room &room_;
   std::string uuid;
-
   std::deque<nlohmann::json> write_msgs_;
 };
 
@@ -248,6 +248,5 @@ int main(int argc, char *argv[]) {
   catch (std::exception &e) {
     std::cerr << "Exception: " << e.what() << "\n";
   }
-
   return 0;
 }
