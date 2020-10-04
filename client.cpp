@@ -109,7 +109,6 @@ class chat_client :
           midiout->sendMessage(&message);
           read_msg.erase(0, n);
           SLEEP(10);
-
         }
       } catch (std::exception &e) {
         std::cerr << e.what();
