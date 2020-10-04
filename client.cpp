@@ -1,24 +1,6 @@
-#include <iostream>
-#include "RtMidi.h"
-#include <deque>
-#include <boost/asio.hpp>
-#include "signal_handler.hpp"
-#include "json.hpp"
-#include <memory>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/read_until.hpp>
-#include <boost/asio/redirect_error.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/asio/write.hpp>
+#include "common.hpp"
 
 enum {
   max_length = 1024
@@ -100,7 +82,7 @@ class chat_client :
                                                                use_awaitable);
         if (n > 0) {
           nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
-//          std::cout << cur_message.dump() << std::endl;
+          BOOST_LOG_TRIVIAL(debug) << cur_message.dump() << std::endl;
           std::vector<unsigned char> message;
           message.clear();
           message.push_back(cur_message["bytes"][0]);
@@ -160,9 +142,10 @@ void midi_callback(double deltatime, std::vector<unsigned char> *message, void *
 }
 
 int main(int argc, char *argv[]) {
+  initLogger();
   try {
     if (argc != 3) {
-      std::cerr << "Usage: chat_client <host> <port>\n";
+      BOOST_LOG_TRIVIAL(error) << "Usage: chat_client <host> <port>\n";
       return 1;
     }
 
@@ -181,7 +164,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    std::cerr << "Exception: " << e.what() << "\n";
+    BOOST_LOG_TRIVIAL(error) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }

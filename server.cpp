@@ -1,33 +1,15 @@
-
 #include <cstdlib>
-#include <deque>
-#include <iostream>
-#include <memory>
 #include <set>
-#include "json.hpp"
+#include <chrono>
+#include "common.hpp"
 
-#include <utility>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/read_until.hpp>
-#include <boost/asio/redirect_error.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/asio/write.hpp>
-
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/thread.hpp>
 
 #if defined(WIN32)
 #include <windows.h>
 #define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
 #else // Unix variants
 #include <unistd.h>
+#include <asoundlib.h>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
@@ -171,43 +153,43 @@ class chat_session
 void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
   a.lock();
   int k = 0, four_bars = 0;
-  std::cout << "Generating clock at "
-            << (60.0 / 24.0 / sleep_ms * 1000.0)
-            << " BPM." << std::endl;
+  BOOST_LOG_TRIVIAL(debug) << "Generating clock at "
+                           << (60.0 / 24.0 / sleep_ms * 1000.0)
+                           << " BPM." << std::endl;
 
   int num_four_bars = 8;
   while (true) {
     if (four_bars == num_four_bars) {
       nlohmann::json message;
-      message["bytes"][0] = 0xFA;
+      message["bytes"][0] = MIDI_CMD_COMMON_START;
       message["meta"]["uuid"] = session->GetUuid();
-      std::cout << "MIDI start" << std::endl;
+      BOOST_LOG_TRIVIAL(debug) << "MIDI start" << std::endl;
       session->deliver(message);
       four_bars = 0;
-      message["bytes"][0] = 0xFC;
+      message["bytes"][0] = MIDI_CMD_COMMON_STOP;
       message["meta"]["uuid"] = session->GetUuid();
       session->deliver(message);
-//      std::cout << "MIDI stop" << std::endl;
+      BOOST_LOG_TRIVIAL(debug) << "MIDI stop" << std::endl;
     }
     if (four_bars > 0) {
       // MIDI continue
       nlohmann::json message;
-      message["bytes"][0] = 0xFB;
+      message["bytes"][0] = MIDI_CMD_COMMON_CONTINUE;
       message["meta"]["uuid"] = session->GetUuid();
       session->deliver(message);
-//      std::cout << "MIDI continue" << std::endl;
+      BOOST_LOG_TRIVIAL(debug) << "MIDI continue" << std::endl;
     }
 
     for (k = 0; k < 96; k++) {
       // MIDI clock
       nlohmann::json message;
-      message["bytes"][0] = 0xF8;
+      message["bytes"][0] = MIDI_CMD_COMMON_CLOCK;
       message["meta"]["uuid"] = session->GetUuid();
 
       session->deliver(message);
       if (k % 24 == 0)
-//        std::cout << "MIDI clock (one beat)" << std::endl;
-        SLEEP(sleep_ms);
+        BOOST_LOG_TRIVIAL(debug) << "MIDI clock (one beat)" << std::endl;
+      SLEEP(sleep_ms);
     }
     nlohmann::json message;
 
@@ -230,6 +212,7 @@ awaitable<void> listener(tcp::acceptor acceptor) {
 }
 
 int main(int argc, char *argv[]) {
+  initLogger();
   try {
     if (argc < 2) {
       std::cerr << "Usage: chat_server <port> [<port> ...]\n";
@@ -247,7 +230,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    std::cerr << "Exception: " << e.what() << "\n";
+    BOOST_LOG_TRIVIAL(error) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }
