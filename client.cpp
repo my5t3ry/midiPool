@@ -60,9 +60,7 @@ class chat_client :
   const std::string &GetUuid() const {
     return uuid;
   }
-  void init_handler() {
 
-  }
   void init_midi() {
     midiin->openVirtualPort("midiPool send");
     midiin->ignoreTypes(false, false, false);
@@ -143,8 +141,6 @@ class chat_client :
   std::string uuid;
   int writing = 0;
   midi_message_queue write_msgs_;
-  std::string readData;
-
   RtMidiIn *midiin = new RtMidiIn();
   RtMidiOut *midiout = new RtMidiOut();
 };
