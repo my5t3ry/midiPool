@@ -82,7 +82,7 @@ class chat_client :
                                                                use_awaitable);
         if (n > 0) {
           nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
-          BOOST_LOG_TRIVIAL(debug) << cur_message.dump() << std::endl;
+          LOG(DEBUG) << cur_message.dump() ;
           std::vector<unsigned char> message;
           message.clear();
           message.push_back(cur_message["bytes"][0]);
@@ -91,7 +91,7 @@ class chat_client :
           SLEEP(10);
         }
       } catch (std::exception &e) {
-        std::cerr << e.what();
+        LOG(DEBUG) << e.what();
 //        stop();
       }
     }
@@ -144,7 +144,7 @@ void midi_callback(double deltatime, std::vector<unsigned char> *message, void *
 int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
-      BOOST_LOG_TRIVIAL(debug) << "Usage: chat_client <host> <port>\n";
+      LOG(DEBUG) << "Usage: chat_client <host> <port>\n";
       return 1;
     }
 
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    BOOST_LOG_TRIVIAL(debug) << "Exception: " << e.what() << "\n";
+    LOG(DEBUG) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }

@@ -5,6 +5,7 @@
 #ifndef MIDIPOOL__COMMON_HPP_
 #define MIDIPOOL__COMMON_HPP_
 
+#include "log.hpp"
 #include <utility>
 #include "RtMidi.h"
 #include <boost/asio.hpp>
@@ -12,9 +13,7 @@
 #include <deque>
 #include <iostream>
 #include <memory>
-#include <iostream>
 #include <deque>
-#include <memory>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/detached.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -26,10 +25,9 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
-#include <boost/log/trivial.hpp>
-
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/thread.hpp>
+#include <iostream>
 
 #endif //MIDIPOOL__COMMON_HPP_
