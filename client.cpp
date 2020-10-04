@@ -142,10 +142,9 @@ void midi_callback(double deltatime, std::vector<unsigned char> *message, void *
 }
 
 int main(int argc, char *argv[]) {
-  initLogger();
   try {
     if (argc != 3) {
-      BOOST_LOG_TRIVIAL(error) << "Usage: chat_client <host> <port>\n";
+      BOOST_LOG_TRIVIAL(debug) << "Usage: chat_client <host> <port>\n";
       return 1;
     }
 
@@ -164,7 +163,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    BOOST_LOG_TRIVIAL(error) << "Exception: " << e.what() << "\n";
+    BOOST_LOG_TRIVIAL(debug) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }

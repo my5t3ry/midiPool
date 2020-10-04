@@ -3,7 +3,6 @@
 #include <chrono>
 #include "common.hpp"
 
-
 #if defined(WIN32)
 #include <windows.h>
 #define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
@@ -194,13 +193,14 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
     nlohmann::json message;
 
     four_bars = four_bars + 1;
-//    SLEEP(500);
+//    SLEEP(500)
   }
   a.unlock();
 }
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
+
   for (;;) {
     const std::shared_ptr<chat_session> &session = std::make_shared<chat_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -212,7 +212,6 @@ awaitable<void> listener(tcp::acceptor acceptor) {
 }
 
 int main(int argc, char *argv[]) {
-  initLogger();
   try {
     if (argc < 2) {
       std::cerr << "Usage: chat_server <port> [<port> ...]\n";
@@ -230,7 +229,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    BOOST_LOG_TRIVIAL(error) << "Exception: " << e.what() << "\n";
+    BOOST_LOG_TRIVIAL(debug) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }

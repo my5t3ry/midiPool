@@ -27,19 +27,9 @@
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/log/core.hpp>
-#include <boost/log/expressions.hpp>
 
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/thread.hpp>
-namespace logging = boost::log;
-
-void initLogger() {
-  logging::core::get()->set_filter
-      (
-          logging::trivial::severity >= logging::trivial::info
-      );
-}
 
 #endif //MIDIPOOL__COMMON_HPP_
