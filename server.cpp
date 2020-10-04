@@ -114,20 +114,23 @@ class chat_session
 
  private:
   awaitable<void> reader() {
-    try {
-      for (std::string read_msg;;) {
+    while (socket_.is_open()) {
+      try {
+        std::string read_msg;
         std::size_t n = co_await boost::asio::async_read_until(socket_,
-                                                               boost::asio::dynamic_buffer(read_msg, 1024),
+                                                               boost::asio::dynamic_buffer(read_msg, 2048),
                                                                "\n",
                                                                use_awaitable);
         nlohmann::json cur_message = nlohmann::json::parse(read_msg.data());
-
-        room_.deliver(cur_message);
-        read_msg.erase(0, n);
+        if (n > 0) {
+          room_.deliver(cur_message);
+          read_msg.erase(0, n);
+        }
       }
-    }
-    catch (std::exception &) {
-      stop();
+      catch (std::exception &e) {
+        std::cerr << e.what();
+        stop();
+      }
     }
   }
 
