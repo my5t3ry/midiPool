@@ -27,6 +27,7 @@
 #include <boost/asio/write.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include "boost/date_time/posix_time/posix_time.hpp"
 #include <boost/thread.hpp>
 #include <iostream>
 

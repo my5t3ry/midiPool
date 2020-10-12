@@ -20,6 +20,8 @@ using boost::asio::co_spawn;
 using boost::asio::detached;
 using boost::asio::redirect_error;
 using boost::asio::use_awaitable;
+namespace pt = boost::posix_time;
+
 
 class chat_participant {
  public:
@@ -66,6 +68,15 @@ class chat_session
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
   }
+  time_t get_current_timestamp(){
+    pt::ptime current_date_microseconds = pt::microsec_clock::local_time();
+    boost::posix_time::ptime epoch(boost::gregorian::date(1970,1,1));
+    boost::posix_time::time_duration x = current_date_microseconds - epoch;  // needs UTC to local corr.,
+    // but we get the fract. sec.
+    struct tm t = boost::posix_time::to_tm(current_date_microseconds);       // this helps with UTC conve.
+    return mktime(&t) + 1.0 * x.fractional_seconds() / x.ticks_per_second();
+  }
+
 
   void start() {
     room_.join(shared_from_this());
@@ -83,7 +94,7 @@ class chat_session
     uuid_stream << boost::uuids::random_generator()();
     uuid = uuid_stream.str();
   }
-  const std::string &GetUuid() const {
+  const std::string &get_uuid() const {
     return uuid;
   }
 
@@ -148,7 +159,7 @@ class chat_session
   std::deque<nlohmann::json> write_msgs_;
 };
 
-void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
+void midi_clock(int sleep_ms, std::shared_ptr<chat_session> session) {
   int k = 0, four_bars = 0;
   LOG(DEBUG) << "Generating clock at "
              << (60.0 / 24.0 / sleep_ms * 1000.0)
@@ -159,12 +170,14 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
     if (four_bars == num_four_bars) {
       nlohmann::json message;
       message["bytes"][0] = MIDI_CMD_COMMON_START;
-      message["meta"]["uuid"] = session->GetUuid();
+      message["meta"]["uuid"] = session->get_uuid();
+      message["meta"]["exec_timestamp"] = session->get_current_timestamp();
       LOG(DEBUG) << "MIDI start";
       session->deliver(message);
       four_bars = 0;
       message["bytes"][0] = MIDI_CMD_COMMON_STOP;
-      message["meta"]["uuid"] = session->GetUuid();
+      message["meta"]["uuid"] = session->get_uuid();
+      message["meta"]["exec_timestamp"] = session->get_current_timestamp();
       session->deliver(message);
       LOG(DEBUG) << "MIDI stop";
     }
@@ -172,7 +185,8 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
       // MIDI continue
       nlohmann::json message;
       message["bytes"][0] = MIDI_CMD_COMMON_CONTINUE;
-      message["meta"]["uuid"] = session->GetUuid();
+      message["meta"]["uuid"] = session->get_uuid();
+      message["meta"]["exec_timestamp"] = session->get_current_timestamp();
       session->deliver(message);
       LOG(DEBUG) << "MIDI continue";
     }
@@ -181,7 +195,9 @@ void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
       // MIDI clock
       nlohmann::json message;
       message["bytes"][0] = MIDI_CMD_COMMON_CLOCK;
-      message["meta"]["uuid"] = session->GetUuid();
+      message["meta"]["uuid"] = session->get_uuid();
+      message["meta"]["exec_timestamp"] = session->get_current_timestamp();
+
 
       session->deliver(message);
       if (k % 24 == 0)
@@ -203,7 +219,7 @@ awaitable<void> listener(tcp::acceptor acceptor) {
         co_await acceptor.async_accept(use_awaitable),
         room
     );
-    boost::thread *midiThread = new boost::thread(midiClock, 25, session);
+    boost::thread *midiThread = new boost::thread(midi_clock, 25, session);
     session->start();
   }
 }
@@ -215,6 +231,7 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     boost::asio::io_context io_context(1);
+
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
       LOG(INFO) << "Server starts at: " << port;
