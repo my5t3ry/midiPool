@@ -7,12 +7,14 @@ SET (BUILD_SHARED_LIBRARIES OFF)
 set (CMAKE_CXX_STANDARD 17)
 set (LIBCXX_ENABLE_STATIC ON)
 set (LIBCXXABI_INSTALL_STATIC_LIBRARY ON)
-set (Boost_USE_STATIC_LIBS ON)
-find_package (Boost 1.74.0 COMPONENTS program_options REQUIRED)
+SET (Boost_USE_STATIC_LIBS ON)
+SET (Boost_USE_MULTITHREADED ON)
+SET (Boost_USE_STATIC_RUNTIME ON)
+find_package (Boost 1.74.0 COMPONENTS program_options thread REQUIRED)
 
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DLIBCXX_CXX_ABI=libstdc++ -D_DEBUG -Wall -D__LINUX_ALSA__ -I/usr/include/c++/v1/ -nodefaultlibs -lc++  -lc++ -lc++abi -lm -lc  -stdlib=libc++  -fcoroutines-ts -ldl   -static -static-libgcc  -lgcc_eh -static-libstdc++ ")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -std=c++11 -D_DEBUG -Wall -D__LINUX_ALSA__ -I/usr/include/c++/v1/ -nodefaultlibs   -lc++ -lc++abi -lm -lc  -stdlib=libc++  -fcoroutines-ts -ldl   -static -static-libgcc ")
 set (CMAKE_CXX_COMPILER "clang++")
-set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -DLIBCXX_CXX_ABI=libstdc++ -static -static-libgcc  -lgcc_eh -static-libstdc++")
+set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -std=c++0x  -std=c++11-static -stdlib=libc++  ")
 
 include_directories (.)
 
@@ -28,8 +30,8 @@ find_package (ALSA REQUIRED)
 
 message (WARNING "libasound found: ${ALSA_FOUND}")
 include_directories (${ALSA_INCLUDE_DIRS})
-target_link_libraries (client ${ALSA_LIBRARIES} Boost::program_options boost_thread pthread gcc_eh c++ m dl c c++abi c++experimental)
-target_link_libraries (server ${ALSA_LIBRARIES} Boost::program_options boost_thread pthread gcc_eh c++ m c dl c++abi c++experimental)
+target_link_libraries (client ${ALSA_LIBRARIES} Boost::program_options pthread c++ gcc_eh m dl c c++abi c++experimental)
+target_link_libraries (server ${ALSA_LIBRARIES} Boost::program_options pthread c++ gcc_eh m c dl c++abi c++experimental)
 
 #
 #TARGET_LINK_LIBRARIES(server
