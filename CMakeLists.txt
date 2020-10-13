@@ -1,10 +1,13 @@
 cmake_minimum_required (VERSION 3.13)
 project (midiPool)
 
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_DEBUG -Wall -D__LINUX_ALSA__ -I/usr/include/c++/v1/ -nodefaultlibs -stdlib=libc++ -lc++ -lc++abi -lm -lc -lgcc_s -lgcc -lc++experimental -fcoroutines-ts  ")
+set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_COMPILER "clang++")
-set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -nodefaultlibs -lc++ -lc++abi -lm -lc -lgcc_s -lgcc -stdlib=libc++ -lc++abi  -lc++experimental")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -m32 -static -fcoroutines-ts --stdlib=libc++ -Xclang -fconcepts-ts")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -stdlib=libc++ -lc++abi")
+
+include_directories (/home/my5t3ry/codeBase/c/boost/boost_1_74_0)
+link_directories (/home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage)
 
 include_directories (.)
 
@@ -18,10 +21,14 @@ add_executable (client
 
 find_package (ALSA REQUIRED)
 
+set (Boost_USE_STATIC_LIBS ON) # only find static libs
+set (Boost_USE_MULTITHREADED ON)
+set (Boost_USE_STATIC_RUNTIME ON)
+find_package (Boost 1.74.0 COMPONENTS date_time filesystem system thread)
 message (WARNING "libasound found: ${ALSA_FOUND}")
 include_directories (${ALSA_INCLUDE_DIRS})
-target_link_libraries (client ${ALSA_LIBRARIES} pthread c++ c++abi c++experimental boost_thread)
-target_link_libraries (server ${ALSA_LIBRARIES} pthread c++ c++abi c++experimental boost_thread)
+target_link_libraries (client ${ALSA_LIBRARIES} ${Boost_LIBRARIES} pthread)
+target_link_libraries (server ${ALSA_LIBRARIES} ${Boost_LIBRARIES} pthread)
 
 #
 #TARGET_LINK_LIBRARIES(server
