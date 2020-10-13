@@ -69,11 +69,14 @@ class midi_cue {
     }
   }
   static void send_midi_messages() {
-    if (!midi_messages_.empty()) {
+    std::vector<int> indices_to_erase;
+    while (true) {
+      if (!indices_to_erase.empty() > 0) {
+        indices_to_erase.clear();
+      }
       long cur_timestamp = get_posix_timestamp();
-      vector<int> indices_to_erase;
       int k;
-      for (k = 0; k < midi_messages_.size() - 1; k++) {
+      for (k = 0; k < midi_messages_.size(); k++) {
         midi_message &cur_message = midi_messages_.data()[k];
         if (cur_message.timestamp <= cur_timestamp) {
           LOG(DEBUG) << "sending midi message: " << cur_message.message_bytes << " with timestamp: "
@@ -95,10 +98,6 @@ class midi_cue {
         midi_messages_.erase(midi_messages_.begin() + cur_index);
       }
       SLEEP(1);
-      send_midi_messages();
-    } else {
-      SLEEP(1);
-      send_midi_messages();
     }
   }
   static void cue_midi_message(const midi_message &midi_message) {
