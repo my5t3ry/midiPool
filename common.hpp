@@ -6,6 +6,7 @@
 #define MIDIPOOL__COMMON_HPP_
 
 #include "log.hpp"
+
 #include <utility>
 #include "RtMidi.h"
 #include <boost/asio.hpp>
@@ -30,5 +31,45 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <boost/thread.hpp>
 #include <iostream>
+#include <asoundlib.h>
+
+
+namespace pt = boost::posix_time;
+
+using boost::thread;
+using boost::mutex;
+using boost::asio::ip::tcp;
+using boost::asio::awaitable;
+using boost::asio::co_spawn;
+using boost::asio::detached;
+using boost::asio::redirect_error;
+using boost::asio::use_awaitable;
+using boost::asio::ip::tcp;
+
+
+#if defined(WIN32)
+#include <windows.h>
+#define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
+#else // Unix variants
+#include <unistd.h>
+#define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
+#endif
+struct midi_message {
+  std::vector<unsigned char> *message_bytes;
+  long int timestamp;
+  int clock_rate;
+};
+
+
+long static get_posix_timestamp(int offset = 0) {
+  pt::ptime current_date_microseconds = pt::microsec_clock::local_time();
+  boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+  boost::posix_time::time_duration x = current_date_microseconds - epoch;
+  struct tm t = boost::posix_time::to_tm(current_date_microseconds);
+  return (long int) ((mktime(&t) + 1.0 * x.fractional_seconds() / x.ticks_per_second())+ offset);
+}
+typedef std::deque<nlohmann::json> midi_message_queue;
+
+#include "chat_client.hpp"
 
 #endif //MIDIPOOL__COMMON_HPP_
