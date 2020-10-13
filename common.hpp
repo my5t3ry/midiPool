@@ -4,7 +4,6 @@
 
 #ifndef MIDIPOOL__COMMON_HPP_
 #define MIDIPOOL__COMMON_HPP_
-
 #include "log.hpp"
 
 #include <utility>
