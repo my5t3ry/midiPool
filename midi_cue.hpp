@@ -65,6 +65,8 @@ class midi_cue {
         message_bytes.push_back(static_cast<unsigned char>(MIDI_CMD_COMMON_CLOCK));
         midi_out_->sendMessage(&message_bytes);
         SLEEP(clock_rate);
+      } else {
+        SLEEP(10);
       }
     }
   }
@@ -82,13 +84,14 @@ class midi_cue {
           LOG(DEBUG) << "sending midi message: " << cur_message.message_bytes << " with timestamp: "
                      << cur_message.timestamp << " at: " << cur_timestamp;
           if (!cur_message.message_bytes->empty()) {
-            midi_out_->sendMessage(cur_message.message_bytes);
-            if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_CONTINUE
+            if ((cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_CONTINUE && clock_rate != 0)
                 || cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_START) {
               clock_rate = cur_message.clock_rate;
+              midi_out_->sendMessage(cur_message.message_bytes);
             }
             if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_STOP) {
               clock_rate = 0;
+              midi_out_->sendMessage(cur_message.message_bytes);
             }
           }
           indices_to_erase.push_back(k);

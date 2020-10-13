@@ -56,10 +56,9 @@ class client_session
     : public chat_participant,
       public std::enable_shared_from_this<client_session> {
  public:
-  client_session(tcp::socket socket, chat_room &room, long midi_buffer)
+  client_session(tcp::socket socket, chat_room &room)
       : socket_(std::move(socket)),
         timer_(socket_.get_executor()),
-        midi_buffer_(midi_buffer),
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
   }
@@ -130,15 +129,15 @@ class client_session
   }
 
   tcp::socket socket_;
-  long midi_buffer_;
   boost::asio::steady_timer timer_;
   chat_room &room_;
   std::deque<nlohmann::json> write_msgs_;
 };
 
-void midi_clock(int clock_rate, chat_room *room) {
+void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
-  LOG(DEBUG) << "Generating clock at "
+
+  LOG(INFO) << "Generating clock at "
              << (60.0 / 24.0 / clock_rate * 1000.0)
              << " BPM.";
 
@@ -159,7 +158,7 @@ void midi_clock(int clock_rate, chat_room *room) {
       message["bytes"][0] = MIDI_CMD_COMMON_START;
       message["meta"]["uuid"] = room->GetUuid();
       message["meta"]["clock_rate"] = clock_rate;
-      message["meta"]["exec_timestamp"] = get_posix_timestamp();
+      message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
       room->deliver(message);
       LOG(DEBUG) << "MIDI start";
     }
@@ -168,7 +167,7 @@ void midi_clock(int clock_rate, chat_room *room) {
       message["bytes"][0] = MIDI_CMD_COMMON_CONTINUE;
       message["meta"]["uuid"] = room->GetUuid();
       message["meta"]["clock_rate"] = clock_rate;
-      message["meta"]["exec_timestamp"] = get_posix_timestamp();
+      message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
       room->deliver(message);
       LOG(DEBUG) << "MIDI continue";
     }
@@ -185,15 +184,15 @@ void midi_clock(int clock_rate, chat_room *room) {
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
-
+  boost::thread *midiThread = new boost::thread(midi_clock, 25, &room, 500);
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
-        room,
-        500
+        room
     );
-    boost::thread *midiThread = new boost::thread(midi_clock, 25, &room);
     session->start();
+    LOG(INFO) << "Client session started\n";
+
   }
 }
 
