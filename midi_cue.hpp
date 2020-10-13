@@ -102,18 +102,6 @@ class midi_cue {
   }
   static void cue_midi_message(const midi_message &midi_message) {
     midi_messages_.push_back(midi_message);
-    if (midi_message.message_bytes->data()[0] == MIDI_CMD_COMMON_CONTINUE
-        || midi_message.message_bytes->data()[0] == MIDI_CMD_COMMON_START) {
-      int k;
-      vector<unsigned char> message_bytes;
-      message_bytes.clear();
-      message_bytes.push_back(static_cast<unsigned char>(MIDI_CMD_COMMON_CLOCK));
-      for (k = 0; k < 96; k++) {
-//        long cur_timestamp = midi_message.timestamp + ((k + 1) * midi_message.clock_rate);
-//        midi_messages_.push_back(build_midi_message(&message_bytes,
-//                                                    cur_timestamp));
-      }
-    }
   }
  private:
 
