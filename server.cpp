@@ -1,28 +1,7 @@
-
+#include "common.hpp"
 #include <cstdlib>
-#include <deque>
-#include <iostream>
-#include <memory>
 #include <set>
-#include "json.hpp"
-
-#include <utility>
-#include <boost/asio/awaitable.hpp>
-#include <boost/asio/detached.hpp>
-#include <boost/asio/co_spawn.hpp>
-#include <boost/asio/io_context.hpp>
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/read_until.hpp>
-#include <boost/asio/redirect_error.hpp>
-#include <boost/asio/signal_set.hpp>
-#include <boost/asio/steady_timer.hpp>
-#include <boost/asio/use_awaitable.hpp>
-#include <boost/asio/write.hpp>
-
-#include <boost/uuid/uuid_generators.hpp>
-#include <boost/uuid/uuid_io.hpp>
-#include <boost/thread.hpp>
-
+#include <chrono>
 
 #if defined(WIN32)
 #include <windows.h>
@@ -31,18 +10,6 @@
 #include <unistd.h>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
-
-
-
-using boost::thread;
-using boost::mutex;
-using boost::asio::ip::tcp;
-using boost::asio::awaitable;
-using boost::asio::co_spawn;
-using boost::asio::detached;
-using boost::asio::redirect_error;
-using boost::asio::use_awaitable;
-mutex a;
 
 class chat_participant {
  public:
@@ -54,10 +21,16 @@ typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
 class chat_room {
  public:
+  chat_room() { assign_uuid(); }
+ public:
   void join(chat_participant_ptr participant) {
     participants_.insert(participant);
 //    for (auto msg: recent_msgs_)
 //      participant->deliver(msg);
+  }
+
+  const std::string &GetUuid() const {
+    return uuid;
   }
 
   void leave(chat_participant_ptr participant) {
@@ -65,25 +38,25 @@ class chat_room {
   }
 
   void deliver(nlohmann::json msg) {
-    recent_msgs_.push_back(msg);
-    while (recent_msgs_.size() > max_recent_msgs)
-      recent_msgs_.pop_front();
-
     for (auto participant: participants_)
       participant->deliver(msg);
   }
 
  private:
+  void assign_uuid() {
+    std::stringstream uuid_stream;
+    uuid_stream << boost::uuids::random_generator()();
+    uuid = uuid_stream.str();
+  }
   std::set<chat_participant_ptr> participants_;
-  enum { max_recent_msgs = 100 };
-  std::deque<std::string> recent_msgs_;
+  std::string uuid;
 };
 
-class chat_session
+class client_session
     : public chat_participant,
-      public std::enable_shared_from_this<chat_session> {
+      public std::enable_shared_from_this<client_session> {
  public:
-  chat_session(tcp::socket socket, chat_room &room)
+  client_session(tcp::socket socket, chat_room &room)
       : socket_(std::move(socket)),
         timer_(socket_.get_executor()),
         room_(room) {
@@ -92,7 +65,6 @@ class chat_session
 
   void start() {
     room_.join(shared_from_this());
-    assign_uuid();
     co_spawn(socket_.get_executor(),
              [self = shared_from_this()] { return self->reader(); },
              detached);
@@ -101,36 +73,31 @@ class chat_session
              [self = shared_from_this()] { return self->writer(); },
              detached);
   }
-  void assign_uuid() {
-    std::stringstream uuid_stream;
-    uuid_stream << boost::uuids::random_generator()();
-    uuid = uuid_stream.str();
-  }
-  const std::string &GetUuid() const {
-    return uuid;
-  }
 
   void deliver(nlohmann::json &msg) {
+    LOG(DEBUG) << "delivering message:" << msg.dump();
     write_msgs_.push_back(msg);
     timer_.cancel_one();
   }
-
  private:
   awaitable<void> reader() {
-    try {
-      for (std::string read_msg;;) {
+    while (socket_.is_open()) {
+      try {
+        std::string read_msg;
         std::size_t n = co_await boost::asio::async_read_until(socket_,
-                                                               boost::asio::dynamic_buffer(read_msg, 1024),
+                                                               boost::asio::dynamic_buffer(read_msg, 2048),
                                                                "\n",
                                                                use_awaitable);
         nlohmann::json cur_message = nlohmann::json::parse(read_msg.data());
-
-        room_.deliver(cur_message);
-        read_msg.erase(0, n);
+        if (n > 0) {
+          room_.deliver(cur_message);
+          read_msg.erase(0, n);
+        }
       }
-    }
-    catch (std::exception &) {
-      stop();
+      catch (std::exception &e) {
+        LOG(ERROR) << e.what();
+        stop();
+      }
     }
   }
 
@@ -146,6 +113,7 @@ class chat_session
           co_await boost::asio::async_write(socket_,
                                             boost::asio::buffer("\n"), use_awaitable);
           write_msgs_.pop_front();
+          SLEEP(20);
         }
       }
     }
@@ -163,80 +131,82 @@ class chat_session
   tcp::socket socket_;
   boost::asio::steady_timer timer_;
   chat_room &room_;
-  std::string uuid;
   std::deque<nlohmann::json> write_msgs_;
 };
 
-void midiClock(int sleep_ms, std::shared_ptr<chat_session> session) {
-  a.lock();
+void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
-  std::cout << "Generating clock at "
-            << (60.0 / 24.0 / sleep_ms * 1000.0)
-            << " BPM." << std::endl;
+
+  LOG(INFO) << "Generating clock at "
+             << (60.0 / 24.0 / clock_rate * 1000.0)
+             << " BPM.";
 
   int num_four_bars = 8;
   while (true) {
     if (four_bars == num_four_bars) {
+//      nlohmann::json message;
+//      message["bytes"][0] = MIDI_CMD_COMMON_STOP;
+//      message["meta"]["uuid"] = room->GetUuid();
+//      message["meta"]["exec_timestamp"] = get_posix_timestamp();
+//      message["meta"]["exec_timestamp"] = get_posix_timestamp();
+//      message["meta"]["clock_rate"] = clock_rate;
+//      LOG(DEBUG) << "MIDI stop";
+//      room->deliver(message);
       nlohmann::json message;
-      message["bytes"][0] = 0xFA;
-      message["meta"]["uuid"] = session->GetUuid();
-      std::cout << "MIDI start" << std::endl;
-      session->deliver(message);
+
       four_bars = 0;
-      message["bytes"][0] = 0xFC;
-      message["meta"]["uuid"] = session->GetUuid();
-      session->deliver(message);
-      std::cout << "MIDI stop" << std::endl;
+      message["bytes"][0] = MIDI_CMD_COMMON_START;
+      message["meta"]["uuid"] = room->GetUuid();
+      message["meta"]["clock_rate"] = clock_rate;
+      message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
+      room->deliver(message);
+      LOG(DEBUG) << "MIDI start";
     }
     if (four_bars > 0) {
-      // MIDI continue
       nlohmann::json message;
-      message["bytes"][0] = 0xFB;
-      message["meta"]["uuid"] = session->GetUuid();
-      session->deliver(message);
-      std::cout << "MIDI continue" << std::endl;
+      message["bytes"][0] = MIDI_CMD_COMMON_CONTINUE;
+      message["meta"]["uuid"] = room->GetUuid();
+      message["meta"]["clock_rate"] = clock_rate;
+      message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
+      room->deliver(message);
+      LOG(DEBUG) << "MIDI continue";
     }
 
     for (k = 0; k < 96; k++) {
-      // MIDI clock
-      nlohmann::json message;
-      message["bytes"][0] = 0xF8;
-      message["meta"]["uuid"] = session->GetUuid();
-
-      session->deliver(message);
-      if (k % 24 == 0)
-        std::cout << "MIDI clock (one beat)" << std::endl;
-      SLEEP(sleep_ms);
+      SLEEP(clock_rate);
     }
     nlohmann::json message;
 
     four_bars = four_bars + 1;
-    SLEEP(500);
+//    SLEEP(500)
   }
-  a.unlock();
 }
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
+  boost::thread *midiThread = new boost::thread(midi_clock, 25, &room, 500);
   for (;;) {
-    const std::shared_ptr<chat_session> &session = std::make_shared<chat_session>(
+    const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
         room
     );
-    thread *midiThread = new thread(midiClock, 25, session);
     session->start();
+    LOG(INFO) << "Client session started\n";
+
   }
 }
 
 int main(int argc, char *argv[]) {
   try {
     if (argc < 2) {
-      std::cerr << "Usage: chat_server <port> [<port> ...]\n";
+      LOG(DEBUG) << "Usage: chat_server <port> [<port> ...]\n";
       return 1;
     }
     boost::asio::io_context io_context(1);
+
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
+      LOG(INFO) << "Server starts at: " << port;
       co_spawn(io_context,
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
@@ -246,7 +216,7 @@ int main(int argc, char *argv[]) {
     io_context.run();
   }
   catch (std::exception &e) {
-    std::cerr << "Exception: " << e.what() << "\n";
+    LOG(ERROR) << "Exception: " << e.what() << "\n";
   }
   return 0;
 }
