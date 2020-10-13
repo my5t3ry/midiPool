@@ -33,7 +33,6 @@
 #include <iostream>
 #include <asoundlib.h>
 
-
 namespace pt = boost::posix_time;
 
 using boost::thread;
@@ -45,7 +44,6 @@ using boost::asio::detached;
 using boost::asio::redirect_error;
 using boost::asio::use_awaitable;
 using boost::asio::ip::tcp;
-
 
 #if defined(WIN32)
 #include <windows.h>
@@ -60,13 +58,8 @@ struct midi_message {
   int clock_rate;
 };
 
-
-long static get_posix_timestamp(int offset = 0) {
-  pt::ptime current_date_microseconds = pt::microsec_clock::local_time();
-  boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
-  boost::posix_time::time_duration x = current_date_microseconds - epoch;
-  struct tm t = boost::posix_time::to_tm(current_date_microseconds);
-  return (long int) ((mktime(&t) + 1.0 * x.fractional_seconds() / x.ticks_per_second())+ offset);
+long int static get_posix_timestamp(int offset = 0) {
+  return std::time(0);
 }
 typedef std::deque<nlohmann::json> midi_message_queue;
 

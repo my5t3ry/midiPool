@@ -20,7 +20,8 @@ int main(int argc, char *argv[]) {
     static chat_client c(io_context, endpoints);
     midi_cue midi_cue;
     midi_cue::init(&c.GetUuid());
-    boost::thread *midiThread = new boost::thread(midi_cue::send_midi_messages);
+    boost::thread *send_midi_messages_thread = new boost::thread(midi_cue::send_midi_messages);
+    boost::thread *send_midi_clock_thread = new boost::thread(midi_cue::send_clock);
 
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });

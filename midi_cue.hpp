@@ -13,6 +13,7 @@ class midi_cue {
   inline static std::vector<midi_message> midi_messages_;
   inline static RtMidiOut *midi_out_;
   inline static RtMidiIn *midi_in_;
+  inline static int clock_rate = 0;
   inline static const string *uuid_;
 
   static void init(const string *uuid) {
@@ -56,6 +57,17 @@ class midi_cue {
     midi_message.clock_rate = clock_rate;
     return midi_message;
   }
+  static void send_clock() {
+    while (true) {
+      if (clock_rate != 0) {
+        vector<unsigned char> message_bytes;
+        message_bytes.clear();
+        message_bytes.push_back(static_cast<unsigned char>(MIDI_CMD_COMMON_CLOCK));
+        midi_out_->sendMessage(&message_bytes);
+        SLEEP(clock_rate);
+      }
+    }
+  }
   static void send_midi_messages() {
     if (!midi_messages_.empty()) {
       long cur_timestamp = get_posix_timestamp();
@@ -68,11 +80,18 @@ class midi_cue {
                      << cur_message.timestamp << " at: " << cur_timestamp;
           if (!cur_message.message_bytes->empty()) {
             midi_out_->sendMessage(cur_message.message_bytes);
+            if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_CONTINUE
+                || cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_START) {
+              clock_rate = cur_message.clock_rate;
+            }
+            if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_STOP) {
+              clock_rate = 0;
+            }
           }
           indices_to_erase.push_back(k);
         }
       }
-      for (const auto &cur_index : indices_to_erase) {
+      for (int cur_index : indices_to_erase) {
         midi_messages_.erase(midi_messages_.begin() + cur_index);
       }
       SLEEP(1);
@@ -92,12 +111,11 @@ class midi_cue {
       message_bytes.push_back(static_cast<unsigned char>(MIDI_CMD_COMMON_CLOCK));
       for (k = 0; k < 96; k++) {
 //        long cur_timestamp = midi_message.timestamp + ((k + 1) * midi_message.clock_rate);
-//        midi_messages_.push_back(build_midi_message(midi_message.message_bytes,
+//        midi_messages_.push_back(build_midi_message(&message_bytes,
 //                                                    cur_timestamp));
       }
     }
   }
-
  private:
 
 };
