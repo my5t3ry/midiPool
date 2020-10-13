@@ -31,7 +31,7 @@
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <boost/thread.hpp>
 #include <iostream>
-#include <asoundlib.h>
+#include <alsa/asoundlib.h>
 
 namespace pt = boost::posix_time;
 
