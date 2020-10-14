@@ -105,7 +105,7 @@ class midi_cue {
               midi_cue->clock_rate = 0;
               midi_message stop_message;
               vector<unsigned char> new_bytes;
-              LOG(DEBUG) << "sending midi pos message: ";
+              LOG(DEBUG) << "sending midi pos message: " << cur_message.message_bytes->data()[1];
               stop_message.message_bytes = &new_bytes;
               stop_message.message_bytes->push_back(MIDI_CMD_COMMON_STOP);
               midi_message start_message;
