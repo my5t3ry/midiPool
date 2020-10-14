@@ -18,14 +18,17 @@ class midi_cue {
 
   static void init(const string *uuid) {
     uuid_ = uuid;
+    LOG(DEBUG) << "init midi";
+
     midi_out_ = new RtMidiOut();
     midi_in_ = new RtMidiIn();
+    LOG(DEBUG) << "midi interface initialized.";
     midi_in_->openVirtualPort("midiPool send");
     midi_in_->ignoreTypes(false, false, false);
     midi_out_->openVirtualPort("midiPool receiver");
     midi_in_->ignoreTypes(false, false, false);
     midi_in_->setCallback(midi_cue::midi_callback);
-    LOG(INFO) << "midi interface initialized.";
+    LOG(DEBUG) << "virtual midi ports initialized.";
   }
 
   static void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
