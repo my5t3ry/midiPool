@@ -181,13 +181,11 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
 }
 void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
   nlohmann::json message;
-
   message["bytes"][0] = MIDI_CMD_COMMON_START;
   message["meta"]["uuid"] = room->GetUuid();
   message["meta"]["clock_rate"] = clock_rate;
   message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
   LOG(DEBUG) << "MIDI start";
-
   room->deliver(message);
 }
 
