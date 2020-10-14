@@ -102,6 +102,7 @@ class midi_cue {
             }
           }
           indices_to_erase.push_back(k);
+          SLEEP(1);
         }
       }
       for (int cur_index : indices_to_erase) {
