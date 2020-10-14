@@ -152,7 +152,6 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       stop_message["bytes"][1] = 0x00;
       stop_message["meta"]["uuid"] = room->GetUuid();
       stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
-      stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
       stop_message["meta"]["clock_rate"] = clock_rate;
       LOG(DEBUG) << "MIDI song pos: 0";
       room->deliver(stop_message);
