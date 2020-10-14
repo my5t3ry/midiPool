@@ -4,9 +4,11 @@
 
 #ifndef MIDIPOOL__COMMON_HPP_
 #define MIDIPOOL__COMMON_HPP_
+#define BOOST_ASIO_HAS_CO_AWAIT 1
 
 #include "log.hpp"
 
+#include <any>
 #include <utility>
 #include "RtMidi.h"
 #include <boost/asio.hpp>
@@ -29,14 +31,11 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include <boost/thread.hpp>
 #include <iostream>
 #include <alsa/asoundlib.h>
 
 namespace pt = boost::posix_time;
 
-using boost::thread;
-using boost::mutex;
 using boost::asio::ip::tcp;
 using boost::asio::awaitable;
 using boost::asio::co_spawn;

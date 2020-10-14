@@ -184,7 +184,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
-  boost::thread *midiThread = new boost::thread(midi_clock, 25, &room, 500);
+  std::thread midi_clock_thread(midi_clock, 25, &room, 500);
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),

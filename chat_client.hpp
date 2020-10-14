@@ -45,7 +45,7 @@ class chat_client {
       try {
         std::string read_msg;
         std::size_t n = co_await boost::asio::async_read_until(socket_,
-                                                               boost::asio::dynamic_buffer(read_msg, 2048),
+                                                               boost::asio::dynamic_buffer(read_msg, 5096),
                                                                "\n",
                                                                use_awaitable);
         if (n > 0) {
