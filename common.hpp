@@ -31,14 +31,11 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
-#include <boost/thread.hpp>
 #include <iostream>
 #include <alsa/asoundlib.h>
 
 namespace pt = boost::posix_time;
 
-using boost::thread;
-using boost::mutex;
 using boost::asio::ip::tcp;
 using boost::asio::awaitable;
 using boost::asio::co_spawn;
