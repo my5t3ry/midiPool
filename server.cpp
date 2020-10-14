@@ -190,7 +190,7 @@ void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
-  std::thread midi_clock_thread(midi_clock, 25, &room, 500);
+  std::thread midi_clock_thread(midi_clock, 25, &room, 30);
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
