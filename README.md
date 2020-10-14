@@ -6,7 +6,7 @@
 
 - [ ] stable enough that it's usable for online jam sessions
 - [X] server/client architecture
-- [X] client spawns two virtual midi devices (send/recv.) on os level
+- [X] client spawns two virtual midi devices (send/recv.) with rtmidi.
 - [X] json msg bus
 - [X] users can join broadcast rooms
 - [ ] server sends 'bar_sync_msg' to all clients, the msg contains {target_send_timestamp,bpm,position}. client generates a stack of 0xFB and 0xF8 midi messages. this messages will kept in buffer. every message contains a target_send_timestamp. a dedicated clock message spooler pipes the messages into the virtual midi input device. every client receives tick/continue messages simultaneously. clock slave sequencers should be bpm/tick/position synced
