@@ -92,7 +92,6 @@ class chat_client {
       stop();
     }
   }
-
   void stop() {
     socket_.close();
   }

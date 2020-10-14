@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include "server_config.hpp"
 #include <cstdlib>
 #include <set>
 #include <chrono>
@@ -11,6 +12,7 @@
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
+const server_config server_config;
 class chat_participant {
  public:
   virtual ~chat_participant() {}
@@ -137,12 +139,14 @@ class client_session
 void send_start_message(int clock_rate, chat_room *room, long midi_buffer);
 void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
-
-  LOG(INFO) << "Generating clock at "
+  int num_four_bars = server_config.GetLoopLength();
+  LOG(INFO) << "Generating clock at"
+            << " BPM:"
             << (60.0 / 24.0 / clock_rate * 1000.0)
-            << " BPM.";
-
-  int num_four_bars = 8;
+            << " LOOP SIZE:"
+            << num_four_bars
+            << " MIDI_BUFFER:"
+            << midi_buffer;
   send_start_message(clock_rate, room, midi_buffer);
   four_bars = 0;
   while (true) {
@@ -155,9 +159,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       stop_message["meta"]["clock_rate"] = clock_rate;
       LOG(DEBUG) << "MIDI song pos: 0: " << stop_message.dump();
       room->deliver(stop_message);
-//      send_start_message(clock_rate, room, midi_buffer + 1);
       four_bars = 0;
-
     }
     if (four_bars > 0) {
       nlohmann::json message;
@@ -173,7 +175,6 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       SLEEP(clock_rate);
     }
     nlohmann::json message;
-
     four_bars = four_bars + 1;
 //    SLEEP(500)
   }
@@ -190,7 +191,7 @@ void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   chat_room room;
-  std::thread midi_clock_thread(midi_clock, 25, &room, 30);
+  std::thread midi_clock_thread(midi_clock, server_config.GetTickInterval(), &room, server_config.GetMidiBuffer());
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -208,7 +209,6 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     boost::asio::io_context io_context(1);
-
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
       LOG(INFO) << "Server starts at: " << port;
