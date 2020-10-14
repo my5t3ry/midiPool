@@ -43,6 +43,8 @@
 
 #ifndef RTMIDI_H
 #define RTMIDI_H
+#define __RTMIDI_DEBUG__ 1
+
 
 #if defined _WIN32 || defined __CYGWIN__
 #if defined(RTMIDI_EXPORT)
