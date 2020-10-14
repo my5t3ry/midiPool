@@ -13,16 +13,15 @@ enum typelog {
   ERROR
 };
 
-struct structlog {
+struct log_cfg {
   bool headers = false;
-  typelog level = DEBUG;
+  typelog level = INFO;
+//  typelog level = DEBUG;
 };
 
 class LOG {
  public:
-
-  structlog cfg;
-
+  log_cfg cfg;
   LOG() {}
   LOG(typelog type) {
     msglevel = type;

@@ -11,7 +11,6 @@ class midi_cue {
  public:
   RtMidiOut *midi_out_;
   RtMidiIn *midi_in_;
-
   midi_message_queue write_msgs_;
   std::vector<midi_message> midi_messages_;
   int clock_rate = 0;
