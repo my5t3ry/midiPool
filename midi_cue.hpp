@@ -103,15 +103,18 @@ class midi_cue {
             }
             if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_SONG_POS) {
               midi_cue->clock_rate = 0;
-              midi_message *stop_message;
-              stop_message->message_bytes->push_back(MIDI_CMD_COMMON_STOP);
-              midi_message *start_message;
-              start_message->message_bytes->push_back(MIDI_CMD_COMMON_START);
+              midi_message stop_message;
+              vector<unsigned char> new_bytes;
+              LOG(DEBUG) << "sending midi pos message: "
+              stop_message.message_bytes = &new_bytes;
+              stop_message.message_bytes->push_back(MIDI_CMD_COMMON_STOP);
+              midi_message start_message;
+              vector<unsigned char> new_start_bytes;
+              start_message.message_bytes = &new_start_bytes;
+              start_message.message_bytes->push_back(MIDI_CMD_COMMON_START);
               midi_cue->midi_out_->sendMessage(cur_message.message_bytes);
-              SLEEP(1);
-              midi_cue->midi_out_->sendMessage(stop_message->message_bytes);
-              SLEEP(1);
-              midi_cue->midi_out_->sendMessage(start_message->message_bytes);
+              midi_cue->midi_out_->sendMessage(stop_message.message_bytes);
+              midi_cue->midi_out_->sendMessage(start_message.message_bytes);
               midi_cue->clock_rate = cur_message.clock_rate;
             }
           }
