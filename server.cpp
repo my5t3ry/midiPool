@@ -149,8 +149,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
     if (four_bars == num_four_bars) {
       nlohmann::json stop_message;
       stop_message["bytes"][0] = MIDI_CMD_COMMON_STOP;
-//      stop_message["bytes"][1] = 0x00;
-//      stop_message["bytes"][2] = 0x08;
+      stop_message["bytes"][1] = 0x00;
       stop_message["meta"]["uuid"] = room->GetUuid();
       stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
       stop_message["meta"]["clock_rate"] = clock_rate;
