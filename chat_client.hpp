@@ -49,12 +49,11 @@ class chat_client {
       try {
         std::string read_msg;
         std::size_t n = co_await boost::asio::async_read_until(socket_,
-                                                               boost::asio::dynamic_buffer(read_msg, 5096),
+                                                               boost::asio::dynamic_buffer(read_msg, 2096),
                                                                "\n",
                                                                use_awaitable);
         if (n > 0) {
           nlohmann::json cur_message = nlohmann::json::parse(read_msg.substr(0, n));
-          LOG(DEBUG) << cur_message.dump();
           vector<unsigned char> message_bytes;
           message_bytes.clear();
           for (unsigned char cur_byte: cur_message["bytes"]) {
@@ -64,6 +63,8 @@ class chat_client {
                                                                    (long) cur_message["meta"]["exec_timestamp"],
                                                                    (int) cur_message["meta"]["clock_rate"]);
           midi_cue->cue_midi_message(midi_message);
+          LOG(DEBUG) <<"adding midi message:"<< cur_message.dump();
+
           read_msg.erase(0, n);
           SLEEP(10);
         }
