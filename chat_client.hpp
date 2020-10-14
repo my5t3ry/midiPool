@@ -31,11 +31,12 @@ class chat_client {
 
   void do_connect(const tcp::resolver::results_type &endpoints) {
     boost::asio::async_connect(socket_, endpoints,
-                               [this](boost::system::error_code ec, tcp::endpoint) {
+                               [this](boost::system::error_code ec, tcp::endpoint endpoint) {
                                  if (!ec) {
                                    co_spawn(socket_.get_executor(),
                                             [this] { return this->reader(); },
                                             detached);
+                                   LOG(INFO) << "client connected to: " << endpoint.address() << ":" << endpoint.port();
                                  }
                                });
   }
