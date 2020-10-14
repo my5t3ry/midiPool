@@ -7,6 +7,7 @@
 #define BOOST_ASIO_HAS_CO_AWAIT 1
 
 #include "log.hpp"
+#include <alsa/asoundlib.h>
 
 #include <any>
 #include <utility>
@@ -32,7 +33,6 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
 #include <iostream>
-#include <alsa/asoundlib.h>
 
 namespace pt = boost::posix_time;
 

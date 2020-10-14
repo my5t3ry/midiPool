@@ -19,9 +19,10 @@ int main(int argc, char *argv[]) {
     static chat_client c(io_context, endpoints);
     LOG(INFO) << "client connecting to: " << argv[1] << ":" << argv[2];
     midi_cue midi_cue;
-    midi_cue::init(&c.GetUuid());
-    std::thread send_midi_messages_thread(midi_cue::send_midi_messages);
-    std::thread send_midi_clock_thread(midi_cue::send_clock);
+    midi_cue.init(const_cast<string &>(c.GetUuid()));
+    c.SetMidiCue(&midi_cue);
+    std::thread send_midi_messages_thread(midi_cue::send_midi_messages, &midi_cue);
+    std::thread send_midi_clock_thread(midi_cue::send_clock, &midi_cue);
     LOG(INFO) << "midi spooler threads initialized.";
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });

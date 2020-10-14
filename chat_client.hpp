@@ -60,10 +60,10 @@ class chat_client {
           for (unsigned char cur_byte: cur_message["bytes"]) {
             message_bytes.push_back(cur_byte);
           }
-          midi_message midi_message = midi_cue::build_midi_message(&message_bytes,
+          midi_message midi_message = midi_cue->build_midi_message(&message_bytes,
                                                                    (long) cur_message["meta"]["exec_timestamp"],
                                                                    (int) cur_message["meta"]["clock_rate"]);
-          midi_cue::cue_midi_message(midi_message);
+          midi_cue->cue_midi_message(midi_message);
           read_msg.erase(0, n);
           SLEEP(10);
         }
@@ -77,12 +77,12 @@ class chat_client {
   awaitable<void> writer() {
     try {
       writing = 1;
-      while (!midi_cue::write_msgs_.empty()) {
+      while (!midi_cue->write_msgs_.empty()) {
         co_await boost::asio::async_write(socket_,
-                                          boost::asio::buffer(midi_cue::write_msgs_.front().dump()), use_awaitable);
+                                          boost::asio::buffer(midi_cue->write_msgs_.front().dump()), use_awaitable);
         co_await boost::asio::async_write(socket_,
                                           boost::asio::buffer("\n"), use_awaitable);
-        midi_cue::write_msgs_.pop_front();
+        midi_cue->write_msgs_.pop_front();
       }
       writing = 0;
     }
@@ -101,7 +101,6 @@ class chat_client {
   boost::asio::steady_timer timer_;
   std::string uuid;
   int writing = 0;
-
 };
 
 #endif //MIDIPOOL__CHAT_CLIENT_HPP_
