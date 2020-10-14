@@ -25,6 +25,7 @@ class midi_cue {
     midi_out_->openVirtualPort("midiPool receiver");
     midi_in_->ignoreTypes(false, false, false);
     midi_in_->setCallback(midi_cue::midi_callback);
+    LOG(INFO) << "midi interface initialized.";
   }
 
   static void midi_callback(double deltatime, std::vector<unsigned char> *message, void *userData) {
