@@ -144,7 +144,6 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int num_four_bars = 8;
 
   four_bars = 0;
-  room->deliver(message);
   LOG(DEBUG) << "MIDI start";
   while (true) {
     if (four_bars == num_four_bars) {
@@ -166,6 +165,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       message["meta"]["uuid"] = room->GetUuid();
       message["meta"]["clock_rate"] = clock_rate;
       message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
+      room->deliver(message);
 
     }
     if (four_bars > 0) {
