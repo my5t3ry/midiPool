@@ -102,8 +102,8 @@ class midi_cue {
             }
           }
           indices_to_erase.push_back(k);
-          SLEEP(1);
         }
+        SLEEP(1);
       }
       for (int cur_index : indices_to_erase) {
         midi_cue->midi_messages_.erase(midi_cue->midi_messages_.begin() + cur_index);

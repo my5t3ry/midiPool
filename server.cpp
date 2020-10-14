@@ -156,7 +156,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       stop_message["meta"]["clock_rate"] = clock_rate;
       LOG(DEBUG) << "MIDI song pos: 0";
       room->deliver(stop_message);
-      send_start_message(clock_rate, room, midi_buffer + 50);
+      send_start_message(clock_rate, room, midi_buffer + 1);
       four_bars = 0;
 
     }
