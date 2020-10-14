@@ -1,11 +1,11 @@
-cmake_minimum_required (VERSION 3.19)
+cmake_minimum_required (VERSION 3.17)
 project (midiPool)
 
 SET (CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 #SET (BUILD_SHARED_LIBRARIES OFF)
 set (CMAKE_CXX_STANDARD 20)
 set (CMAKE_CXX_COMPILER "clang++")
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -fcoroutines-ts -stdlib=libc++  -lc++experimental -Xclang  ")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -fcoroutines-ts -stdlib=libc++")
 set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lstdc++ -lc++ -lc++abi  -lm -pthread -static")
 
 include_directories (.)
