@@ -7,7 +7,8 @@
 #include "common.hpp"
 #include "midi_cue.hpp"
 
-class chat_client {
+class chat_client :
+    public std::enable_shared_from_this<chat_client> {
  public:
   chat_client(boost::asio::io_context &io_context,
               const tcp::resolver::results_type &endpoints)
@@ -39,7 +40,6 @@ class chat_client {
                                    LOG(INFO) << "client connected to: " << endpoint.address() << ":" << endpoint.port();
                                  } else {
                                    LOG(ERROR) << "connect failed: " << ec.message();
-
                                  }
                                });
   }
