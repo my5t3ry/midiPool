@@ -153,9 +153,9 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
       stop_message["meta"]["uuid"] = room->GetUuid();
       stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
       stop_message["meta"]["clock_rate"] = clock_rate;
-      LOG(DEBUG) << "MIDI song pos: 0";
+      LOG(DEBUG) << "MIDI song pos: 0: " << stop_message.dump();
       room->deliver(stop_message);
-      send_start_message(clock_rate, room, midi_buffer + 1);
+      send_start_message(clock_rate, room, midi_buffer);
       four_bars = 0;
 
     }
@@ -183,8 +183,8 @@ void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
   message["bytes"][0] = MIDI_CMD_COMMON_START;
   message["meta"]["uuid"] = room->GetUuid();
   message["meta"]["clock_rate"] = clock_rate;
-  message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer);
-  LOG(DEBUG) << "MIDI start";
+  message["meta"]["exec_timestamp"] = get_posix_timestamp(midi_buffer + (long) 15);
+  LOG(DEBUG) << "MIDI start: " << message.dump();
   room->deliver(message);
 }
 
