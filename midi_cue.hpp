@@ -15,7 +15,7 @@ class midi_cue {
   std::vector<midi_message> midi_messages_;
   int clock_rate = 0;
   string *uuid_;
-
+^
   void init(string &uuid) {
     uuid_ = &uuid;
     LOG(DEBUG) << "init midi";
