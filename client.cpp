@@ -21,8 +21,11 @@ int main(int argc, char *argv[]) {
     LOG(INFO) << "client connecting to: " << argv[1] << ":" << argv[2];
     midi_cue midi_cue;
     midi_cue::init(&c.GetUuid());
+    LOG(INFO) << "midi interface initialized.";
     std::thread send_midi_messages_thread(midi_cue::send_midi_messages);
     std::thread send_midi_clock_thread(midi_cue::send_clock);
+    LOG(INFO) << "midi spooler threads initialized.";
+
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
