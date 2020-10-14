@@ -87,7 +87,7 @@ class midi_cue {
       int k;
       for (k = 0; k < midi_cue->midi_messages_.size(); k++) {
         midi_message &cur_message = midi_cue->midi_messages_.data()[k];
-        if (cur_message.timestamp <= cur_timestamp ) {
+        if (cur_message.timestamp >= cur_timestamp ) {
           LOG(DEBUG) << "sending midi message: " << cur_message.message_bytes << " with timestamp: "
                      << cur_message.timestamp << " at: " << cur_timestamp;
           if (!cur_message.message_bytes->empty()) {
