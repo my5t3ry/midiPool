@@ -4,9 +4,11 @@
 
 #ifndef MIDIPOOL__COMMON_HPP_
 #define MIDIPOOL__COMMON_HPP_
+#define BOOST_ASIO_HAS_CO_AWAIT 1
 
 #include "log.hpp"
 
+#include <any>
 #include <utility>
 #include "RtMidi.h"
 #include <boost/asio.hpp>
