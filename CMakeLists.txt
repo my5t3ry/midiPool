@@ -22,14 +22,13 @@ find_package (ALSA REQUIRED)
 
 unset (Boost_INCLUDE_DIR CACHE)
 unset (Boost_LIBRARY_DIRS CACHE)
-set(BOOST_LIBRARYDIR /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage/)
-set(BOOST_INCLUDEDIR /home/my5t3ry/codeBase/c/boost/boost_1_74_0/)
+set (BOOST_LIBRARYDIR /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage/)
+set (BOOST_INCLUDEDIR /home/my5t3ry/codeBase/c/boost/boost_1_74_0/)
 set (Boost_USE_STATIC_LIBS ON) # only find static libs
 set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME ON)
 
-
-link_directories (${Boost_LIBRARY_DIRS} /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage/lib )
+link_directories (${Boost_LIBRARY_DIRS} /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage/lib)
 
 find_package (Boost 1.74.0 COMPONENTS date_time system coroutine)
 
