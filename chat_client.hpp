@@ -37,6 +37,9 @@ class chat_client {
                                             [this] { return this->reader(); },
                                             detached);
                                    LOG(INFO) << "client connected to: " << endpoint.address() << ":" << endpoint.port();
+                                 } else {
+                                   LOG(ERROR) << "connect failed: " << ec.message();
+
                                  }
                                });
   }

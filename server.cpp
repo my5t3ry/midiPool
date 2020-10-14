@@ -138,8 +138,8 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
 
   LOG(INFO) << "Generating clock at "
-             << (60.0 / 24.0 / clock_rate * 1000.0)
-             << " BPM.";
+            << (60.0 / 24.0 / clock_rate * 1000.0)
+            << " BPM.";
 
   int num_four_bars = 8;
   while (true) {
@@ -192,7 +192,6 @@ awaitable<void> listener(tcp::acceptor acceptor) {
     );
     session->start();
     LOG(INFO) << "Client session started\n";
-
   }
 }
 
