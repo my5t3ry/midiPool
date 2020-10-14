@@ -18,6 +18,7 @@ int main(int argc, char *argv[]) {
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
     static chat_client c(io_context, endpoints);
+    LOG(INFO) << "client connecting to: " << argv[1] << ":" << argv[2];
     midi_cue midi_cue;
     midi_cue::init(&c.GetUuid());
     std::thread send_midi_messages_thread(midi_cue::send_midi_messages);
