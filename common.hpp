@@ -58,7 +58,7 @@ struct midi_message {
 };
 
 long int static get_posix_timestamp(int offset = 0) {
-  return std::time(0);
+  return std::time(0) + offset;
 }
 typedef std::deque<nlohmann::json> midi_message_queue;
 
