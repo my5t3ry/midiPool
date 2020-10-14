@@ -9,17 +9,16 @@
 
 class midi_cue {
  public:
-  inline static midi_message_queue write_msgs_;
-  inline static std::vector<midi_message> midi_messages_;
-  inline static RtMidiOut *midi_out_;
-  inline static RtMidiIn *midi_in_;
-  inline static int clock_rate = 0;
-  inline static const string *uuid_;
+   static const midi_message_queue write_msgs_;
+   static const std::vector<midi_message> midi_messages_;
+   static const RtMidiOut *midi_out_;
+   static const RtMidiIn *midi_in_;
+   static const int clock_rate = 0;
+   static const const string *uuid_;
 
   static void init(const string *uuid) {
     uuid_ = uuid;
     LOG(DEBUG) << "init midi";
-
     midi_out_ = new RtMidiOut();
     midi_in_ = new RtMidiIn();
     LOG(DEBUG) << "midi interface initialized.";
