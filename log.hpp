@@ -15,7 +15,7 @@ enum typelog {
 
 struct structlog {
   bool headers = false;
-  typelog level = INFO;
+  typelog level = DEBUG;
 };
 
 class LOG {
