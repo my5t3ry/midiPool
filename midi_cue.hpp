@@ -102,12 +102,15 @@ class midi_cue {
               midi_cue->clock_rate = 0;
             }
             if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_SONG_POS) {
-              midi_message stop_message;
-              stop_message.message_bytes->push_back(MIDI_CMD_COMMON_STOP);
-              midi_message start_message;
-              start_message.message_bytes->push_back(MIDI_CMD_COMMON_START);
+              midi_cue->clock_rate = 0;
+              midi_message *stop_message;
+              stop_message->message_bytes->push_back(MIDI_CMD_COMMON_STOP);
+              midi_message *start_message;
+              start_message->message_bytes->push_back(MIDI_CMD_COMMON_START);
               midi_cue->midi_out_->sendMessage(cur_message.message_bytes);
+              SLEEP(1);
               midi_cue->midi_out_->sendMessage(stop_message.message_bytes);
+              SLEEP(1);
               midi_cue->midi_out_->sendMessage(start_message.message_bytes);
               midi_cue->clock_rate = cur_message.clock_rate;
             }
