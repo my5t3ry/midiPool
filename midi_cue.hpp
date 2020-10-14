@@ -97,7 +97,6 @@ class midi_cue {
               midi_cue->midi_out_->sendMessage(cur_message.message_bytes);
             }
             if (cur_message.message_bytes->data()[0] == MIDI_CMD_COMMON_STOP) {
-              midi_cue->clock_rate = 0;
               midi_cue->midi_out_->sendMessage(cur_message.message_bytes);
             }
           }

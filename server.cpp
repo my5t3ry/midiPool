@@ -144,14 +144,14 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
   int num_four_bars = 8;
   while (true) {
     if (four_bars == num_four_bars) {
-//      nlohmann::json message;
-//      message["bytes"][0] = MIDI_CMD_COMMON_STOP;
-//      message["meta"]["uuid"] = room->GetUuid();
-//      message["meta"]["exec_timestamp"] = get_posix_timestamp();
-//      message["meta"]["exec_timestamp"] = get_posix_timestamp();
-//      message["meta"]["clock_rate"] = clock_rate;
-//      LOG(DEBUG) << "MIDI stop";
-//      room->deliver(message);
+      nlohmann::json stop_message;
+      stop_message["bytes"][0] = MIDI_CMD_COMMON_STOP;
+      stop_message["meta"]["uuid"] = room->GetUuid();
+      stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
+      stop_message["meta"]["exec_timestamp"] = get_posix_timestamp();
+      stop_message["meta"]["clock_rate"] = clock_rate;
+      LOG(DEBUG) << "MIDI stop";
+      room->deliver(stop_message);
       nlohmann::json message;
 
       four_bars = 0;
