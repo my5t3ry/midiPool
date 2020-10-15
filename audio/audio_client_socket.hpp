@@ -93,8 +93,9 @@ class audio_client_socket {
     if (!sender_context) {
       LOG(ERROR) << "roc_sendercontext_open";
     }
-    std::string device = "hw,0:0";
+    std::string device = "default";
     signal_estimator::AlsaWriter alsa_writer;
+    alsa_writer.open(config, device.c_str());
     /* Receive and play samples. */
     for (;;) {
       /* Read samples from receiver.
@@ -105,7 +106,7 @@ class audio_client_socket {
       memset(&frame, 0, sizeof(frame));
 
       frame.samples = recv_samples;
-      frame.samples_size = frame.samples_size * sizeof(float);
+      frame.samples_size = config.buffer_size * sizeof(float);
 
       if (roc_receiver_read(receiver, &frame) != 0) {
         break;
@@ -114,9 +115,9 @@ class audio_client_socket {
         ssize_t n;
         for (n = 0; n < config.buffer_size; n++) {
           float sampleFloat = recv_samples[n];
-          sampleFloat *= 32767;
-          int16_t sampleInt = (int16_t) sampleFloat;
-          out_frame.add_data(sampleInt);
+//          sampleFloat *= 32767;
+//          int16_t sampleInt = (int16_t) sampleFloat;
+          out_frame.add_data(sampleFloat);
         }
         alsa_writer.write(out_frame);
       }

@@ -160,7 +160,7 @@ class audio_server_socket {
       if (roc_receiver_read(receiver, &frame) != 0) {
         break;
       } else {
-        roc_sender_write(sender, &frame);
+//        roc_sender_write(sender, &frame);
       }
     }
 

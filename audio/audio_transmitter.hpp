@@ -84,7 +84,7 @@ class audio_transmitter {
       LOG(ERROR) << "roc_sender_connect";
     }
 
-    std::string device = "hw:0,0";
+    std::string device = "default";
     signal_estimator::AlsaReader alsa_reader;
     alsa_reader.open(config, device.c_str());
     /* Open SoX output device. */
