@@ -42,11 +42,6 @@
 #define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
 #define EXAMPLE_BUFFER_SIZE 100
 
-//#define LOG(ERROR) <<msg)                                                                        \
-//    do {                                                                                 \
-//        fprintf(stderr, "oops: %s\n", msg);                                              \
-//        exit(1);                                                                         \
-//    } while (0)
 
 class audio_server {
  public:
@@ -216,7 +211,5 @@ class audio_server {
     if (roc_context_close(context) != 0) {
       LOG(ERROR) << "roc_context_close";
     }
-
-    return 0;
   }
 };
