@@ -22,9 +22,9 @@ class chat_participant {
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
-class chat_room {
+class session_room {
  public:
-  chat_room() { assign_uuid(); }
+  session_room() { assign_uuid(); }
  public:
   void join(chat_participant_ptr participant) {
     participants_.insert(participant);
@@ -59,7 +59,7 @@ class client_session
     : public chat_participant,
       public std::enable_shared_from_this<client_session> {
  public:
-  client_session(tcp::socket socket, chat_room &room)
+  client_session(tcp::socket socket, session_room &room)
       : socket_(std::move(socket)),
         timer_(socket_.get_executor()),
         room_(room) {
@@ -133,12 +133,12 @@ class client_session
 
   tcp::socket socket_;
   boost::asio::steady_timer timer_;
-  chat_room &room_;
+  session_room &room_;
   std::deque<nlohmann::json> write_msgs_;
 };
 
-void send_start_message(int clock_rate, chat_room *room, long midi_buffer);
-void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
+void send_start_message(int clock_rate, session_room *room, long midi_buffer);
+void midi_clock(int clock_rate, session_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
   int num_four_bars = server_config.GetLoopLength();
   LOG(INFO) << "Generating clock at"
@@ -180,7 +180,7 @@ void midi_clock(int clock_rate, chat_room *room, long midi_buffer = 500) {
 //    SLEEP(500)
   }
 }
-void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
+void send_start_message(int clock_rate, session_room *room, long midi_buffer) {
   nlohmann::json message;
   message["bytes"][0] = MIDI_CMD_COMMON_START;
   message["meta"]["uuid"] = room->GetUuid();
@@ -191,7 +191,7 @@ void send_start_message(int clock_rate, chat_room *room, long midi_buffer) {
 }
 
 awaitable<void> listener(tcp::acceptor acceptor) {
-  chat_room room;
+  session_room room;
   std::thread midi_clock_thread(midi_clock, server_config.GetTickInterval(), &room, server_config.GetMidiBuffer());
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
