@@ -19,7 +19,7 @@ class chat_participant {
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
-audio_server_socket audio_server(1000, 1001);
+audio_server_socket audio_server;
 
 class session_room {
  public:
