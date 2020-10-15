@@ -4,8 +4,8 @@
 
 #ifndef MIDIPOOL__CHAT_CLIENT_HPP_
 #define MIDIPOOL__CHAT_CLIENT_HPP_
-#include "common.hpp"
-#include "midi_cue.hpp"
+#include "utils/common.hpp"
+#include "midi/midi_cue.hpp"
 
 class chat_client :
     public std::enable_shared_from_this<chat_client> {

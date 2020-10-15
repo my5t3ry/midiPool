@@ -1,7 +1,7 @@
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include "common.hpp"
-#include "midi_cue.hpp"
+#include "utils/common.hpp"
+#include "midi/midi_cue.hpp"
 #include "chat_client.hpp"
 
 enum {

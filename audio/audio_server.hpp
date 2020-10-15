@@ -1,9 +1,5 @@
 /*
- * Building:
- *   gcc receiver_sox.c -lroc -lsox
- *
- * Running:
- *   ./a.out
+ * my5t3ry wuuuuh :)
  */
 
 #include <stdio.h>
@@ -11,12 +7,14 @@
 #include <string.h>
 
 #include <sox.h>
-
-#include <roc/address.h>
+#include <roc/config.h>
 #include <roc/context.h>
-#include <roc/log.h>
-#include <roc/receiver.h>
+#include <roc/address.h>
 #include <roc/sender.h>
+#include <roc/frame.h>
+#include <roc/receiver.h>
+
+#include "utils/log.hpp"
 
 
 /* Receiver parameters. */
@@ -44,13 +42,13 @@
 #define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
 #define EXAMPLE_BUFFER_SIZE 100
 
-#define oops(msg)                                                                        \
-    do {                                                                                 \
-        fprintf(stderr, "oops: %s\n", msg);                                              \
-        exit(1);                                                                         \
-    } while (0)
+//#define LOG(ERROR) <<msg)                                                                        \
+//    do {                                                                                 \
+//        fprintf(stderr, "oops: %s\n", msg);                                              \
+//        exit(1);                                                                         \
+//    } while (0)
 
-class audio_server  {
+class audio_server {
  public:
   static int init_audio_server() {
 
@@ -62,7 +60,7 @@ class audio_server  {
      * We need a sender_context to create a sender. */
     roc_context *sender_context = roc_context_open(&sender_context_config);
     if (!sender_context) {
-      oops("roc_sendercontext_open");
+      LOG(ERROR) << "roc_sendercontext_open";
     }
 
     /* Initialize sender config.
@@ -83,7 +81,7 @@ class audio_server  {
     /* Create sender. */
     roc_sender *sender = roc_sender_open(sender_context, &sender_config);
     if (!sender) {
-      oops("roc_sender_open");
+      LOG(ERROR) << "roc_sender_open";
     }
 
     /* Bind sender to a random port. */
@@ -91,25 +89,25 @@ class audio_server  {
     if (roc_address_init(&sender_addr, ROC_AF_AUTO, EXAMPLE_SENDER_IP,
                          EXAMPLE_SENDER_PORT)
         != 0) {
-      oops("roc_senderaddress_init");
+      LOG(ERROR) << "roc_senderaddress_init";
     }
     if (roc_sender_bind(sender, &sender_addr) != 0) {
-      oops("roc_sendersender_bind");
+      LOG(ERROR) << "roc_sendersender_bind";
     }
 
     /* Connect sender to the receiver source (audio) packets port.
      * The receiver should expect packets with RTP header and Reed-Solomon (m=8) FECFRAME
-     * Source Payload ID on that port. */
+    to_addressayload ID on that port. */
     roc_address client_recv_source_addr;
     if (roc_address_init(&client_recv_source_addr, ROC_AF_AUTO, EXAMPLE_CLIENT_RECEIVER_IP,
                          EXAMPLE_CLIENT_RECEIVER_SOURCE_PORT)
         != 0) {
-      oops("roc_address_init");
+      LOG(ERROR) << "roc_address_init";
     }
     if (roc_sender_connect(sender, ROC_PORT_AUDIO_SOURCE, ROC_PROTO_RTP_RS8M_SOURCE,
                            &client_recv_source_addr)
         != 0) {
-      oops("roc_sender_connect");
+      LOG(ERROR) << "roc_sender_connect";
     }
 
     /* Connect sender to the receiver repair (FEC) packets port.
@@ -119,17 +117,16 @@ class audio_server  {
     if (roc_address_init(&client_recv_repair_addr, ROC_AF_AUTO, EXAMPLE_CLIENT_RECEIVER_IP,
                          EXAMPLE_CLIENT_RECEIVER_REPAIR_PORT)
         != 0) {
-      oops("roc_address_init");
+      LOG(ERROR) << "roc_address_init";
     }
     if (roc_sender_connect(sender, ROC_PORT_AUDIO_REPAIR, ROC_PROTO_RS8M_REPAIR,
                            &client_recv_repair_addr)
         != 0) {
-      oops("roc_sender_connect");
+      LOG(ERROR) << "roc_sender_connect";
     }
 
 
     /* Enable debug logging. */
-    roc_log_set_level(ROC_LOG_DEBUG);
 
     /* Initialize context config.
      * Initialize to zero to use default values for all fields. */
@@ -141,7 +138,7 @@ class audio_server  {
      * We need a context to create a receiver. */
     roc_context *context = roc_context_open(&context_config);
     if (!context) {
-      oops("roc_context_open");
+      LOG(ERROR) << "roc_context_open";
     }
 
     /* Initialize receiver config.
@@ -157,7 +154,7 @@ class audio_server  {
     /* Create receiver. */
     roc_receiver *receiver = roc_receiver_open(context, &receiver_config);
     if (!receiver) {
-      oops("roc_receiver_open");
+      LOG(ERROR) << "roc_receiver_open";
     }
 
     /* Bind receiver to the source (audio) packets port.
@@ -167,12 +164,12 @@ class audio_server  {
     if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, EXAMPLE_RECEIVER_IP,
                          EXAMPLE_SERVER_RECEIVER_SOURCE_PORT)
         != 0) {
-      oops("roc_address_init");
+      LOG(ERROR) << "roc_address_init";
     }
     if (roc_receiver_bind(receiver, ROC_PORT_AUDIO_SOURCE, ROC_PROTO_RTP_RS8M_SOURCE,
                           &recv_source_addr)
         != 0) {
-      oops("roc_receiver_bind");
+      LOG(ERROR) << "roc_receiver_bind";
     }
 
     /* Bind receiver to the repair (FEC) packets port.
@@ -182,12 +179,12 @@ class audio_server  {
     if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, EXAMPLE_RECEIVER_IP,
                          EXAMPLE_SERVER_RECEIVER_REPAIR_PORT)
         != 0) {
-      oops("roc_address_init");
+      LOG(ERROR) << "roc_address_init";
     }
     if (roc_receiver_bind(receiver, ROC_PORT_AUDIO_REPAIR, ROC_PROTO_RS8M_REPAIR,
                           &recv_repair_addr)
         != 0) {
-      oops("roc_receiver_bind");
+      LOG(ERROR) << "roc_receiver_bind";
     }
 
 
@@ -212,12 +209,12 @@ class audio_server  {
     }
     /* Destroy receiver. */
     if (roc_receiver_close(receiver) != 0) {
-      oops("roc_receiver_close");
+      LOG(ERROR) << "roc_receiver_close";
     }
 
     /* Destroy context. */
     if (roc_context_close(context) != 0) {
-      oops("roc_context_close");
+      LOG(ERROR) << "roc_context_close";
     }
 
     return 0;

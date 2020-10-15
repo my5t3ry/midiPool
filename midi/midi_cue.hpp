@@ -5,7 +5,7 @@
 #ifndef MIDIPOOL__MIDI_CUE_HPP_
 #define MIDIPOOL__MIDI_CUE_HPP_
 
-#include "common.hpp"
+#include "utils/common.hpp"
 
 class midi_cue {
  public:
