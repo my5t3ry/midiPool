@@ -18,7 +18,7 @@
 
 #include "utils/log.hpp"
 
-static roc_sender* init_sender(string client_ip) {
+static roc_sender *init_sender(string client_ip) {
   roc_log_set_level(ROC_LOG_DEBUG);
   signal_estimator::Config config;
 
@@ -28,7 +28,6 @@ static roc_sender* init_sender(string client_ip) {
   if (!sender_context) {
     LOG(ERROR) << "roc_sendercontext_open";
   }
-  std::string target_ip = "127.0.0.1";
 
   roc_sender_config sender_config;
   memset(&sender_config, 0, sizeof(sender_config));
@@ -43,7 +42,7 @@ static roc_sender* init_sender(string client_ip) {
   }
   /* Bind sender to a random port. */
   roc_address sender_addr;
-  if (roc_address_init(&sender_addr, ROC_AF_AUTO, target_ip.c_str(),
+  if (roc_address_init(&sender_addr, ROC_AF_AUTO, client_ip.c_str(),
                        5000)
       != 0) {
     LOG(ERROR) << "roc_senderaddress_init";

@@ -20,9 +20,17 @@
 
 class audio_server_socket {
  public:
-  static void init_audio_socket(const int audio_data_port_ = 1000,
-                                const int audio_repair_port_ = 1001,
-                                const roc_sender *sender = NULL) {
+  audio_server_socket(int audio_data_port, int audio_repair_port)
+      : audio_data_port_(audio_data_port), audio_repair_port_(audio_repair_port) {}
+ public:
+  void SetSenders(roc_sender *sender) {
+    senders.push_back(sender);
+  }
+  std::thread spawn() {
+    return std::thread(&audio_server_socket::init_audio_socket, this);
+  }
+ public:
+  void init_audio_socket() {
     roc_log_set_level(ROC_LOG_DEBUG);
     signal_estimator::Config config;
     server_config server_config;
@@ -104,8 +112,10 @@ class audio_server_socket {
       if (roc_receiver_read(receiver, &frame) != 0) {
         break;
       } else {
-        LOG(DEBUG) << "forwarding frame with size: " << &frame.samples_size;
-        roc_sender_write(sender, &frame);
+//        LOG(DEBUG) << "forwarding frame with size: " << &frame.samples_size;
+        if (!senders.empty()) {
+          roc_sender_write(senders.data()[0], &frame);
+        }
       }
     }
 
@@ -119,4 +129,10 @@ class audio_server_socket {
       LOG(ERROR) << "roc_context_close";
     }
   }
+
+ private:
+  int audio_data_port_;
+  int audio_repair_port_;
+  std::vector<roc_sender *> senders;
+
 };

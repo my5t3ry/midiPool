@@ -92,6 +92,7 @@ class audio_transmitter {
     for (;;) {
       /* Read samples from receiver.
        * If not enough samples are received, receiver will pad buffer with zeros. */
+
       signal_estimator::Frame read_frame(config);
       for (size_t n = 0; n < config.total_samples() / read_frame.size(); n++) {
         if (!alsa_reader.read(read_frame)) {
@@ -102,7 +103,8 @@ class audio_transmitter {
       roc_frame frame;
       memset(&frame, 0, sizeof(frame));
       frame.samples = read_frame.data();
-      frame.samples_size = read_frame.size();
+      frame.samples_size =read_frame.size() *  sizeof(float);
+
 
       if (roc_sender_write(sender, &frame) != 0) {
         break;

@@ -20,6 +20,8 @@ class chat_participant {
 
 typedef std::shared_ptr<chat_participant> chat_participant_ptr;
 
+audio_server_socket audio_server(1000, 1001);
+
 class session_room {
  public:
   session_room() { assign_uuid(); }
@@ -64,8 +66,8 @@ class client_session
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
     LOG(INFO) << "client has ip:" << client_ip_;
-    roc_sender *sender = init_sender(client_ip_);
-    std::thread audio_server(audio_server_socket::init_audio_socket, 1000, 1001, sender);
+    roc_sender *new_sender = init_sender(client_ip_);
+    audio_server.SetSenders(new_sender);
   }
 
   void start() {
@@ -200,7 +202,6 @@ awaitable<void> listener(tcp::acceptor acceptor) {
                                 server_config.loop_length,
                                 &room,
                                 server_config.midi_buffer);
-
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -218,7 +219,7 @@ int main(int argc, char *argv[]) {
       LOG(DEBUG) << "Usage: chat_server <port> [<port> ...]\n";
       return 1;
     }
-
+    const thread &server_thread = audio_server.spawn();
     boost::asio::io_context io_context(1);
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
