@@ -24,9 +24,8 @@
 #define EXAMPLE_SERVER_RECEIVER_SOURCE_PORT 10000
 #define EXAMPLE_SERVER_RECEIVER_REPAIR_PORT 10001
 
-
 #define EXAMPLE_SENDER_IP "0.0.0.0"
-#define EXAMPLE_SENDER_PORT 0 
+#define EXAMPLE_SENDER_PORT 0
 
 /* Player parameters. */
 #define EXAMPLE_OUTPUT_DEVICE "default"
@@ -45,25 +44,25 @@
 #define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
 #define EXAMPLE_BUFFER_SIZE 100
 
-
-
 #define oops(msg)                                                                        \
     do {                                                                                 \
         fprintf(stderr, "oops: %s\n", msg);                                              \
         exit(1);                                                                         \
     } while (0)
 
-int main() {
-    
-     roc_context_config sender_context_config;
+class audio_server  {
+ public:
+  static int init_audio_server() {
+
+    roc_context_config sender_context_config;
     memset(&sender_context_config, 0, sizeof(sender_context_config));
 
     /* Create sender_context.
      * Context contains memory pools and the network worker thread(s).
      * We need a sender_context to create a sender. */
-    roc_context* sender_context = roc_context_open(&sender_context_config);
+    roc_context *sender_context = roc_context_open(&sender_context_config);
     if (!sender_context) {
-        oops("roc_sendercontext_open");
+      oops("roc_sendercontext_open");
     }
 
     /* Initialize sender config.
@@ -82,9 +81,9 @@ int main() {
     sender_config.automatic_timing = 1;
 
     /* Create sender. */
-    roc_sender* sender = roc_sender_open(sender_context, &sender_config);
+    roc_sender *sender = roc_sender_open(sender_context, &sender_config);
     if (!sender) {
-        oops("roc_sender_open");
+      oops("roc_sender_open");
     }
 
     /* Bind sender to a random port. */
@@ -92,10 +91,10 @@ int main() {
     if (roc_address_init(&sender_addr, ROC_AF_AUTO, EXAMPLE_SENDER_IP,
                          EXAMPLE_SENDER_PORT)
         != 0) {
-        oops("roc_senderaddress_init");
+      oops("roc_senderaddress_init");
     }
     if (roc_sender_bind(sender, &sender_addr) != 0) {
-        oops("roc_sendersender_bind");
+      oops("roc_sendersender_bind");
     }
 
     /* Connect sender to the receiver source (audio) packets port.
@@ -105,12 +104,12 @@ int main() {
     if (roc_address_init(&client_recv_source_addr, ROC_AF_AUTO, EXAMPLE_CLIENT_RECEIVER_IP,
                          EXAMPLE_CLIENT_RECEIVER_SOURCE_PORT)
         != 0) {
-        oops("roc_address_init");
+      oops("roc_address_init");
     }
     if (roc_sender_connect(sender, ROC_PORT_AUDIO_SOURCE, ROC_PROTO_RTP_RS8M_SOURCE,
                            &client_recv_source_addr)
         != 0) {
-        oops("roc_sender_connect");
+      oops("roc_sender_connect");
     }
 
     /* Connect sender to the receiver repair (FEC) packets port.
@@ -120,12 +119,12 @@ int main() {
     if (roc_address_init(&client_recv_repair_addr, ROC_AF_AUTO, EXAMPLE_CLIENT_RECEIVER_IP,
                          EXAMPLE_CLIENT_RECEIVER_REPAIR_PORT)
         != 0) {
-        oops("roc_address_init");
+      oops("roc_address_init");
     }
     if (roc_sender_connect(sender, ROC_PORT_AUDIO_REPAIR, ROC_PROTO_RS8M_REPAIR,
                            &client_recv_repair_addr)
         != 0) {
-        oops("roc_sender_connect");
+      oops("roc_sender_connect");
     }
 
 
@@ -140,9 +139,9 @@ int main() {
     /* Create context.
      * Context contains memory pools and the network worker thread(s).
      * We need a context to create a receiver. */
-    roc_context* context = roc_context_open(&context_config);
+    roc_context *context = roc_context_open(&context_config);
     if (!context) {
-        oops("roc_context_open");
+      oops("roc_context_open");
     }
 
     /* Initialize receiver config.
@@ -156,9 +155,9 @@ int main() {
     receiver_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
 
     /* Create receiver. */
-    roc_receiver* receiver = roc_receiver_open(context, &receiver_config);
+    roc_receiver *receiver = roc_receiver_open(context, &receiver_config);
     if (!receiver) {
-        oops("roc_receiver_open");
+      oops("roc_receiver_open");
     }
 
     /* Bind receiver to the source (audio) packets port.
@@ -168,12 +167,12 @@ int main() {
     if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, EXAMPLE_RECEIVER_IP,
                          EXAMPLE_SERVER_RECEIVER_SOURCE_PORT)
         != 0) {
-        oops("roc_address_init");
+      oops("roc_address_init");
     }
     if (roc_receiver_bind(receiver, ROC_PORT_AUDIO_SOURCE, ROC_PROTO_RTP_RS8M_SOURCE,
                           &recv_source_addr)
         != 0) {
-        oops("roc_receiver_bind");
+      oops("roc_receiver_bind");
     }
 
     /* Bind receiver to the repair (FEC) packets port.
@@ -183,44 +182,44 @@ int main() {
     if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, EXAMPLE_RECEIVER_IP,
                          EXAMPLE_SERVER_RECEIVER_REPAIR_PORT)
         != 0) {
-        oops("roc_address_init");
+      oops("roc_address_init");
     }
     if (roc_receiver_bind(receiver, ROC_PORT_AUDIO_REPAIR, ROC_PROTO_RS8M_REPAIR,
                           &recv_repair_addr)
         != 0) {
-        oops("roc_receiver_bind");
+      oops("roc_receiver_bind");
     }
 
 
     /* Receive and play samples. */
     for (;;) {
-        /* Read samples from receiver.
-         * If not enough samples are received, receiver will pad buffer with zeros. */
-        float recv_samples[EXAMPLE_BUFFER_SIZE];
+      /* Read samples from receiver.
+       * If not enough samples are received, receiver will pad buffer with zeros. */
+      float recv_samples[EXAMPLE_BUFFER_SIZE];
 
-        roc_frame frame;
-        memset(&frame, 0, sizeof(frame));
+      roc_frame frame;
+      memset(&frame, 0, sizeof(frame));
 
-        frame.samples = recv_samples;
+      frame.samples = recv_samples;
 //        frame.samples_size = ;
 
-        if (roc_receiver_read(receiver, &frame) != 0) {
-            break;
-        } else {
-            roc_sender_write(sender, &frame);
-        }
+      if (roc_receiver_read(receiver, &frame) != 0) {
+        break;
+      } else {
+        roc_sender_write(sender, &frame);
+      }
 
     }
-
     /* Destroy receiver. */
     if (roc_receiver_close(receiver) != 0) {
-        oops("roc_receiver_close");
+      oops("roc_receiver_close");
     }
 
     /* Destroy context. */
     if (roc_context_close(context) != 0) {
-        oops("roc_context_close");
+      oops("roc_context_close");
     }
 
     return 0;
-}
+  }
+};

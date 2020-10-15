@@ -1,3 +1,9 @@
+[submodule "audio/--forcen"]
+	path = audio/--forcen
+	url = https://github.com/roc-streaming/roc-toolkit.git
+[submodule "audio/--force"]
+	path = audio/--force
+	url = https://github.com/roc-streaming/roc-toolkit.git
 [submodule "audio/roc-toolkit"]
 	path = audio/roc-toolkit
 	url = https://github.com/roc-streaming/roc-toolkit.git

@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <set>
 #include <chrono>
+#include "audio/audio_server.hpp"
 
 #if defined(WIN32)
 #include <windows.h>
@@ -216,6 +217,7 @@ int main(int argc, char *argv[]) {
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
+    std::thread audio_server(audio_server::init_audio_server);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
