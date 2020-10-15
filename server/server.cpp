@@ -223,7 +223,7 @@ int main(int argc, char *argv[]) {
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
-    std::thread audio_server(audio_socket::init_audio_server);
+    std::thread audio_server(audio_socket::init_audio_socket);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();

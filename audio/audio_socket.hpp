@@ -41,7 +41,7 @@
 
 class audio_socket {
  public:
-  static void init_audio_server() {
+  static void init_audio_socket() {
     server_config server_config;
     roc_context_config sender_context_config;
     memset(&sender_context_config, 0, sizeof(sender_context_config));
