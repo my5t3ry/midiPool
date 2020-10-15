@@ -20,14 +20,6 @@
 #include "RtAudio.h"
 #include "utils/log.hpp"
 
-
-/* Signal parameters */
-#define EXAMPLE_SAMPLE_RATE 44100
-#define EXAMPLE_SINE_RATE 200
-#define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
-#define SIGNAL_EXAMPLE_BUFFER_SIZE 1000
-
-class Config;
 class audio_transmitter {
  public:
   static void init_audio_transmitter(void *target_ip_ptr) {
