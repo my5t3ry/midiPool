@@ -8,6 +8,7 @@
 #define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
 #else // Unix variants
 #include <unistd.h>
+#include <audio/audio_server_transmitter.hpp>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
@@ -63,6 +64,8 @@ class client_session
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
     LOG(INFO) << "client has ip:" << client_ip_;
+    roc_sender *sender = init_sender(client_ip_);
+    std::thread audio_server(audio_server_socket::init_audio_socket, 1000, 1001, sender);
   }
 
   void start() {
@@ -197,6 +200,7 @@ awaitable<void> listener(tcp::acceptor acceptor) {
                                 server_config.loop_length,
                                 &room,
                                 server_config.midi_buffer);
+
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -223,7 +227,6 @@ int main(int argc, char *argv[]) {
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
-    std::thread audio_server(audio_server_socket::init_audio_socket, 1000, 1001);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
