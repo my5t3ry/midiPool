@@ -1,6 +1,6 @@
 # midiPool 
 
-### another attempt to build a midi/(audio) over tcp protocol. 
+### another attempt to build a midi/audio syncing thing with computers
 
 ##### long term/no term goals 
 
