@@ -8,7 +8,6 @@
 #define SLEEP( milliseconds ) Sleep( (DWORD) milliseconds )
 #else // Unix variants
 #include <unistd.h>
-#include <audio/audio_server_transmitter.hpp>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
@@ -66,8 +65,7 @@ class client_session
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
     LOG(INFO) << "client has ip:" << client_ip_;
-    roc_sender *new_sender = init_sender(client_ip_);
-    audio_server.SetSenders(new_sender);
+//    audio_server.add_client_transmission(client_ip_);
   }
 
   void start() {
