@@ -81,7 +81,7 @@ class audio_transmitter {
     /* Bind sender to a random port. */
     roc_address sender_addr;
     if (roc_address_init(&sender_addr, ROC_AF_AUTO, target_ip.c_str(),
-                         connection_config.data_port)
+                         connection_config.sender_port)
         != 0) {
       LOG(ERROR) << "roc_senderaddress_init";
     }
@@ -119,6 +119,46 @@ class audio_transmitter {
         != 0) {
       LOG(ERROR) << "roc_sender_connect";
     }
+    size_t i;
+    for (;;) {
+      /* Generate sine wave. */
+      float samples[EXAMPLE_BUFFER_SIZE];
+      audio_transmitter::gensine(samples, EXAMPLE_BUFFER_SIZE);
 
+      /* Write samples to the sender. */
+      roc_frame frame;
+      memset(&frame, 0, sizeof(frame));
+
+      frame.samples = samples;
+      frame.samples_size = EXAMPLE_BUFFER_SIZE * sizeof(float);
+
+      if (roc_sender_write(sender, &frame) != 0) {
+        LOG(DEBUG) << "roc_sender_write";
+      }
+    }
+    /* Destroy sender. */
+    if (roc_sender_close(sender) != 0) {
+      LOG(ERROR) << "roc_sender_close";
+    }
+
+    /* Destroy context. */
+    if (roc_context_close(sender_context) != 0) {
+      LOG(ERROR) << "roc_context_close";
+    }
+
+  }
+  static void gensine(float *samples, size_t num_samples) {
+    double t = 0;
+    size_t i;
+    for (i = 0; i < num_samples / 2; i++) {
+      const float s =
+          (float) sin(2 * 3.14159265359 * EXAMPLE_SINE_RATE / EXAMPLE_SAMPLE_RATE * t);
+
+      /* Fill samples for left and right channels. */
+      samples[i * 2] = s;
+      samples[i * 2 + 1] = -s;
+
+      t += 1;
+    }
   }
 };

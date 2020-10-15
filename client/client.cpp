@@ -24,13 +24,13 @@ int main(int argc, char *argv[]) {
     midi_cue midi_cue;
     midi_cue.init(const_cast<string &>(c.GetUuid()));
     string target_ip = boost::lexical_cast<std::string>(argv[1]);
-    std::thread audio_server
-        (audio_transmitter::init_audio_transmitter, &target_ip);
 
     c.SetMidiCue(&midi_cue);
     std::thread send_midi_messages_thread(midi_cue::send_midi_messages, &midi_cue);
     std::thread send_midi_clock_thread(midi_cue::send_clock, &midi_cue);
     LOG(INFO) << "midi spooler threads initialized.";
+    std::thread audio_server
+        (audio_transmitter::init_audio_transmitter, &target_ip);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();

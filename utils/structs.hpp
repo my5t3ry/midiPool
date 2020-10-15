@@ -13,6 +13,7 @@ struct midi_message {
 
 struct connection_config {
   string target_ip;
+  int sender_port = 1050;
   int data_port = 1000;
   int repair_port = 1001;
 };
