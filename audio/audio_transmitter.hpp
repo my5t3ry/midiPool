@@ -11,38 +11,24 @@
 #include <roc/context.h>
 #include <roc/address.h>
 #include <roc/sender.h>
+#include <roc/log.h>
 #include <roc/frame.h>
 #include <roc/receiver.h>
 
 #include "utils/log.hpp"
 
 
-/* Receiver parameters. */
-
-#define EXAMPLE_SENDER_IP "0.0.0.0"
-#define EXAMPLE_SENDER_PORT 0
-
-/* Player parameters. */
-#define EXAMPLE_OUTPUT_DEVICE "default"
-#define EXAMPLE_OUTPUT_TYPE "alsa"
-#define EXAMPLE_SAMPLE_RATE 44100
-#define EXAMPLE_NUM_CHANNELS 2
-#define EXAMPLE_BUFFER_SIZE 1000
-
-#define EXAMPLE_CLIENT_RECEIVER_IP "0.0.0.0"
-#define EXAMPLE_CLIENT_RECEIVER_SOURCE_PORT 20000
-#define EXAMPLE_CLIENT_RECEIVER_REPAIR_PORT 20001
-
 /* Signal parameters */
 #define EXAMPLE_SAMPLE_RATE 44100
-#define EXAMPLE_SINE_RATE 440
+#define EXAMPLE_SINE_RATE 200
 #define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
-#define EXAMPLE_BUFFER_SIZE 100
+#define SIGNAL_EXAMPLE_BUFFER_SIZE 1000
 
 class audio_transmitter {
  public:
   static void init_audio_transmitter(void *target_ip_ptr) {
     std::string target_ip = *reinterpret_cast<std::string *>(target_ip_ptr);
+    roc_log_set_level(ROC_LOG_DEBUG);
 
     LOG(INFO) << "connecting audi socket at: " << target_ip;
     connection_config connection_config;
@@ -122,15 +108,15 @@ class audio_transmitter {
     size_t i;
     for (;;) {
       /* Generate sine wave. */
-      float samples[EXAMPLE_BUFFER_SIZE];
-      audio_transmitter::gensine(samples, EXAMPLE_BUFFER_SIZE);
+      float samples[SIGNAL_EXAMPLE_BUFFER_SIZE];
+      audio_transmitter::gensine(samples, SIGNAL_EXAMPLE_BUFFER_SIZE);
 
       /* Write samples to the sender. */
       roc_frame frame;
       memset(&frame, 0, sizeof(frame));
 
       frame.samples = samples;
-      frame.samples_size = EXAMPLE_BUFFER_SIZE * sizeof(float);
+      frame.samples_size = SIGNAL_EXAMPLE_BUFFER_SIZE * sizeof(float);
 
       if (roc_sender_write(sender, &frame) != 0) {
         LOG(DEBUG) << "roc_sender_write";
@@ -152,7 +138,7 @@ class audio_transmitter {
     size_t i;
     for (i = 0; i < num_samples / 2; i++) {
       const float s =
-          (float) sin(2 * 3.14159265359 * EXAMPLE_SINE_RATE / EXAMPLE_SAMPLE_RATE * t);
+          (float) sin(2 * 3.14159265359 * EXAMPLE_SINE_RATE / SIGNAL_EXAMPLE_BUFFER_SIZE * t);
 
       /* Fill samples for left and right channels. */
       samples[i * 2] = s;

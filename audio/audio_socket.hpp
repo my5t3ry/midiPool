@@ -10,6 +10,7 @@
 #include <roc/config.h>
 #include <roc/context.h>
 #include <roc/address.h>
+#include <roc/log.h>
 #include <roc/sender.h>
 #include <roc/frame.h>
 #include <roc/receiver.h>
@@ -27,21 +28,14 @@
 #define EXAMPLE_OUTPUT_TYPE "alsa"
 #define EXAMPLE_SAMPLE_RATE 44100
 #define EXAMPLE_NUM_CHANNELS 2
-#define EXAMPLE_BUFFER_SIZE 1000
+#define EXAMPLE_BUFFER_SIZE 2000
 
-#define EXAMPLE_CLIENT_RECEIVER_IP "0.0.0.0"
-#define EXAMPLE_CLIENT_RECEIVER_SOURCE_PORT 20000
-#define EXAMPLE_CLIENT_RECEIVER_REPAIR_PORT 20001
-
-/* Signal parameters */
-#define EXAMPLE_SAMPLE_RATE 44100
-#define EXAMPLE_SINE_RATE 440
-#define EXAMPLE_SINE_SAMPLES (EXAMPLE_SAMPLE_RATE * 5)
-#define EXAMPLE_BUFFER_SIZE 100
 
 class audio_socket {
  public:
   static void init_audio_socket() {
+    roc_log_set_level(ROC_LOG_DEBUG);
+
     server_config server_config;
     roc_context_config sender_context_config;
     memset(&sender_context_config, 0, sizeof(sender_context_config));
