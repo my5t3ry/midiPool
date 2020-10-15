@@ -18,4 +18,18 @@ struct connection_config {
   int repair_port = 1001;
 };
 
+enum {
+  MaxBufSize = 1000,
+
+  SampleRate = 44100,
+  ChMask = 0x3,
+  NumCh = 2,
+
+  SamplesPerFrame = 20,
+  SamplesPerPacket = 100,
+  FramesPerPacket = SamplesPerPacket / SamplesPerFrame,
+
+  ManyFrames = FramesPerPacket * 20
+};
+
 #endif //MIDIPOOL_UTILS_STRUCTS_HPP_
