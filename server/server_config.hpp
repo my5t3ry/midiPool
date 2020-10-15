@@ -17,7 +17,7 @@ class server_config {
     return midi_buffer;
   }
  private:
-  int loop_length = 0;
+  int loop_length = 8;
   int tick_interval = 25;
   int midi_buffer = 30;
 };

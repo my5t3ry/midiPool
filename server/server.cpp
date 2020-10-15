@@ -116,7 +116,6 @@ class client_session
           co_await boost::asio::async_write(socket_,
                                             boost::asio::buffer("\n"), use_awaitable);
           write_msgs_.pop_front();
-          SLEEP(20);
         }
       }
     }

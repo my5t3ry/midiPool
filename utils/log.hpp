@@ -15,7 +15,7 @@ enum typelog {
 
 struct log_cfg {
   bool headers = false;
-  typelog level = INFO;
+  typelog level = DEBUG;
 //  typelog level = DEBUG;
 };
 
