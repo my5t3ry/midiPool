@@ -7,10 +7,10 @@
 #include "utils/common.hpp"
 #include "midi/midi_cue.hpp"
 
-class chat_client :
-    public std::enable_shared_from_this<chat_client> {
+class midi_client :
+    public std::enable_shared_from_this<midi_client> {
  public:
-  chat_client(boost::asio::io_context &io_context,
+  midi_client(boost::asio::io_context &io_context,
               const tcp::resolver::results_type &endpoints)
       : socket_(io_context),
         timer_(socket_.get_executor()) {
@@ -27,7 +27,7 @@ class chat_client :
     return uuid;
   }
   void SetMidiCue(midi_cue *midi_cue) {
-    chat_client::midi_cue = midi_cue;
+    midi_client::midi_cue = midi_cue;
   }
 
   void do_connect(const tcp::resolver::results_type &endpoints) {

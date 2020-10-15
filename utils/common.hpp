@@ -11,7 +11,7 @@
 
 #include <any>
 #include <utility>
-#include "RtMidi.h"
+#include "midi/RtMidi.h"
 #include <boost/asio.hpp>
 #include "json.hpp"
 #include <deque>
@@ -62,6 +62,6 @@ long int static get_posix_timestamp(int offset = 0) {
 }
 typedef std::deque<nlohmann::json> midi_message_queue;
 
-#include "chat_client.hpp"
+#include "client/midi_client.hpp"
 
 #endif //MIDIPOOL__COMMON_HPP_

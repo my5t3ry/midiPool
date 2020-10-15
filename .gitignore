@@ -8,8 +8,6 @@ Makefile
 *.Release
 *.iml
 .idea
-server
-client
 cmake-build-debug
 cmake-build-debug-clang
 build

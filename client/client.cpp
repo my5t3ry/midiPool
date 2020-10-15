@@ -2,7 +2,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include "utils/common.hpp"
 #include "midi/midi_cue.hpp"
-#include "chat_client.hpp"
+#include "midi_client.hpp"
 
 enum {
   max_length = 1024
@@ -16,8 +16,8 @@ int main(int argc, char *argv[]) {
     boost::asio::io_context io_context(1);
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
-    static chat_client c(io_context, endpoints);
-    std::make_shared<chat_client>(
+    static midi_client c(io_context, endpoints);
+    std::make_shared<midi_client>(
         io_context, endpoints
     );
     LOG(INFO) << "client connecting to: " << argv[1] << ":" << argv[2];
