@@ -115,9 +115,9 @@ class audio_client_socket {
         ssize_t n;
         for (n = 0; n < config.buffer_size; n++) {
           float sampleFloat = recv_samples[n];
-//          sampleFloat *= 32767;
-//          int16_t sampleInt = (int16_t) sampleFloat;
-          out_frame.add_data(sampleFloat);
+          sampleFloat *= 32767;
+          int16_t sampleInt = (int16_t) sampleFloat;
+          out_frame.add_data(sampleInt);
         }
         alsa_writer.write(out_frame);
       }
