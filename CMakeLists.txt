@@ -15,6 +15,11 @@ add_executable (server
 
 add_executable (client
     client/client.cpp
+    audio/signal-estimator/src/AlsaReader.cpp
+    audio/signal-estimator/src/Frame.cpp
+    audio/signal-estimator/src/Config.hpp
+    audio/signal-estimator/src/Time.cpp
+    audio/signal-estimator/src/AlsaUtils.cpp
     midi/RtMidi.cpp utils/json.hpp)
 
 unset (Boost_INCLUDE_DIR CACHE)
@@ -30,7 +35,7 @@ find_package (Boost 1.74.0 COMPONENTS date_time system coroutine)
 message (WARNING "libasound found: ${ALSA_FOUND}  ${ALSA_LIBRARIES}")
 
 link_directories (${Boost_LIBRARY_DIRS} /usr/lib/ /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage /usr/lib/c++ /home/my5t3ry/packages/libc++/src/build/lib/ /home/my5t3ry/packages/libc++/pkg/libc++abi/usr/lib/)
-include_directories (${Boost_INCLUDE_DIRS} ${ALSA_INCLUDE_DIRS} home/my5t3ry/codeBase/c/boost/boost_1_74_0 /usr/x86_64-linux-gnu/include/c++/8/ext/pb_ds/)
+include_directories (${Boost_INCLUDE_DIRS} ${ALSA_INCLUDE_DIRS} ./audio/signal-estimator/src home/my5t3ry/codeBase/c/boost/boost_1_74_0 /usr/x86_64-linux-gnu/include/c++/8/ext/pb_ds/)
 
 target_link_libraries (client ${ALSA_LIBRARIES} roc uv unwind sox sndio asound dl c++abi c++ pthread ${Boost_LIBRARIES})
 target_link_libraries (server ${ALSA_LIBRARIES} roc uv unwind sox sndio

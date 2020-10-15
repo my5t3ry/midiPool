@@ -14,8 +14,10 @@
 #include <roc/log.h>
 #include <roc/frame.h>
 #include <roc/receiver.h>
+#include <audio/signal-estimator/src/Config.hpp>
+#include <audio/signal-estimator/src/AlsaReader.hpp>
 
-
+#include "RtAudio.h"
 #include "utils/log.hpp"
 
 
@@ -59,6 +61,7 @@ class audio_transmitter {
      * Sender must send packets with steady rate, so we should either implement
      * clocking or ask the library to do so. We choose the second here. */
     sender_config.automatic_timing = 1;
+
 
     /* Create sender. */
     roc_sender *sender = roc_sender_open(sender_context, &sender_config);
@@ -108,10 +111,39 @@ class audio_transmitter {
       LOG(ERROR) << "roc_sender_connect";
     }
 
-    sndio::Config source_config;
-    source_config.channels = NumCh;
-    source_config.frame_size = SamplesPerFrame;
 
+
+    /* Initialize SoX parameters. */
+    sox_signalinfo_t signal_info;
+    memset(&signal_info, 0, sizeof(signal_info));
+    signal_info.rate = EXAMPLE_SAMPLE_RATE;
+    signal_info.channels = EXAMPLE_NUM_CHANNELS;
+    signal_info.precision = SOX_SAMPLE_PRECISION;
+    std::string device = "hw:0,0";
+    signal_estimator::Config config;
+    signal_estimator::AlsaReader alsa_reader;
+    alsa_reader.open(config, device.c_str());
+    /* Open SoX output device. */
+    /* Receive and play samples. */
+    for (;;) {
+      /* Read samples from receiver.
+       * If not enough samples are received, receiver will pad buffer with zeros. */
+      signal_estimator::Frame read_frame(config);
+      for (size_t n = 0; n < config.total_samples() / read_frame.size(); n++) {
+        if (!alsa_reader.read(read_frame)) {
+          exit(1);
+        }
+      }
+
+      roc_frame frame;
+      memset(&frame, 0, sizeof(frame));
+      frame.samples = read_frame.data();
+      frame.samples_size = read_frame.size();
+
+      if (roc_sender_write(sender, &frame) != 0) {
+        break;
+      }
+    }
 
     /* Destroy sender. */
     if (roc_sender_close(sender) != 0) {
@@ -124,18 +156,5 @@ class audio_transmitter {
     }
 
   }
-  static void gensine(float *samples, size_t num_samples) {
-    double t = 0;
-    size_t i;
-    for (i = 0; i < num_samples / 2; i++) {
-      const float s =
-          (float) sin(2 * 3.14159265359 * EXAMPLE_SINE_RATE / SIGNAL_EXAMPLE_BUFFER_SIZE * t);
 
-      /* Fill samples for left and right channels. */
-      samples[i * 2] = s;
-      samples[i * 2 + 1] = -s;
-
-      t += 1;
-    }
-  }
 };

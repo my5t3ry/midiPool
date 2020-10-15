@@ -7,3 +7,9 @@
 [submodule "audio/roc-toolkit"]
 	path = audio/roc-toolkit
 	url = https://github.com/roc-streaming/roc-toolkit.git
+[submodule "audio/signal-estimator"]
+	path = audio/signal-estimator
+	url = https://github.com/gavv/signal-estimator.git
+[submodule "audio/rtaudio"]
+	path = audio/rtaudio
+	url = https://github.com/thestk/rtaudio.git

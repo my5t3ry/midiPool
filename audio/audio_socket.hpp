@@ -30,7 +30,6 @@
 #define EXAMPLE_NUM_CHANNELS 2
 #define EXAMPLE_BUFFER_SIZE 2000
 
-
 class audio_socket {
  public:
   static void init_audio_socket() {
