@@ -14,4 +14,5 @@ class server_config {
   const int audio_data_port = 1000;
   const int audio_repair_port = 1001;
 };
+
 #endif //MIDIPOOL__SERVER_CONFIG_HPP_

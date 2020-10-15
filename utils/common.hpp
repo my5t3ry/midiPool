@@ -62,7 +62,7 @@ typedef std::deque<nlohmann::json> midi_message_queue;
 #include "server_config.hpp"
 #include "structs.hpp"
 
-#include "audio/audio_socket.hpp"
+#include "audio/audio_server_socket.hpp"
 #include "audio/audio_transmitter.hpp"
 
 #include "client/client_connection.hpp"

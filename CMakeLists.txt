@@ -16,6 +16,7 @@ add_executable (server
 add_executable (client
     client/client.cpp
     audio/signal-estimator/src/AlsaReader.cpp
+    audio/signal-estimator/src/AlsaWriter.cpp
     audio/signal-estimator/src/Frame.cpp
     audio/signal-estimator/src/Config.hpp
     audio/signal-estimator/src/Time.cpp

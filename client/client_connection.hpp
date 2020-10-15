@@ -16,7 +16,6 @@ class client_connection :
         timer_(socket_.get_executor()) {
     assign_uuid();
     do_connect(endpoints);
-
   }
   void assign_uuid() {
     std::stringstream uuid_stream;

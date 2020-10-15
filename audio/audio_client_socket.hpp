@@ -14,32 +14,17 @@
 #include <roc/sender.h>
 #include <roc/frame.h>
 #include <roc/receiver.h>
+#include <audio/signal-estimator/src/Config.hpp>
+#include <audio/signal-estimator/src/AlsaWriter.hpp>
 
 #include "utils/log.hpp"
 
-
-/* Receiver parameters. */
-
-#define EXAMPLE_SENDER_IP "0.0.0.0"
-#define EXAMPLE_SENDER_PORT 0
-
-/* Player parameters. */
-#define EXAMPLE_OUTPUT_DEVICE "default"
-#define EXAMPLE_OUTPUT_TYPE "alsa"
-#define EXAMPLE_SAMPLE_RATE 44100
-#define EXAMPLE_NUM_CHANNELS 2
-#define EXAMPLE_BUFFER_SIZE 2000
-
-class audio_socket {
+class audio_client_socket {
  public:
-  static void init_audio_socket() {
+  static void init_audio_socket(int audio_data_port_ = 1000, int audio_repair_port_ = 10001) {
     roc_log_set_level(ROC_LOG_DEBUG);
-
-    server_config server_config;
-    roc_context_config sender_context_config;
-    memset(&sender_context_config, 0, sizeof(sender_context_config));
-
-
+    signal_estimator::Config config;
+    std::string bind_address = "127.0.0.1";
     /* Initialize context config.
      * Initialize to zero to use default values for all fields. */
     roc_context_config context_config;
@@ -59,7 +44,7 @@ class audio_socket {
     memset(&receiver_config, 0, sizeof(receiver_config));
 
     /* Setup output frame format. */
-    receiver_config.frame_sample_rate = EXAMPLE_SAMPLE_RATE;
+    receiver_config.frame_sample_rate = config.sample_rate;
     receiver_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     receiver_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
 
@@ -73,8 +58,8 @@ class audio_socket {
      * The receiver will expect packets with RTP header and Reed-Solomon (m=8) FECFRAME
      * Source Payload ID on this port. */
     roc_address recv_source_addr;
-    if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, server_config.bind_address.c_str(),
-                         server_config.audio_data_port)
+    if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, bind_address.c_str(),
+                         audio_data_port_)
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_address_init failed";
     }
@@ -89,8 +74,8 @@ class audio_socket {
      * The receiver will expect packets with Reed-Solomon (m=8) FECFRAME
      * Repair Payload ID on this port. */
     roc_address recv_repair_addr;
-    if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, server_config.bind_address.c_str(),
-                         server_config.audio_repair_port)
+    if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, bind_address.c_str(),
+                         audio_repair_port_)
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_address_init failed";
     }
@@ -99,61 +84,44 @@ class audio_socket {
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_receiver_bind failed";
     }
-    LOG(INFO) << "audio socket is listening on: " << server_config.bind_address << "/"
-              << server_config.audio_data_port << ":" << server_config.audio_repair_port;
-    /* Receive and play samples. */
+    LOG(INFO) << "audio socket is listening on: " << bind_address << "/"
+              << audio_data_port_ << ":" << audio_repair_port_;
 
-    /* Initialize SoX parameters. */
-    sox_signalinfo_t signal_info;
-    memset(&signal_info, 0, sizeof(signal_info));
-    signal_info.rate = EXAMPLE_SAMPLE_RATE;
-    signal_info.channels = EXAMPLE_NUM_CHANNELS;
-    signal_info.precision = SOX_SAMPLE_PRECISION;
-
-    /* Open SoX output device. */
-    sox_format_t *output =
-        sox_open_write(EXAMPLE_OUTPUT_DEVICE, &signal_info, NULL, EXAMPLE_OUTPUT_TYPE, NULL, NULL);
-    if (!output) {
-      LOG(ERROR) << "sox_open_write";
+    roc_context_config sender_context_config;
+    memset(&sender_context_config, 0, sizeof(sender_context_config));
+    roc_context *sender_context = roc_context_open(&sender_context_config);
+    if (!sender_context) {
+      LOG(ERROR) << "roc_sendercontext_open";
     }
-
+    std::string device = "hw,0:0";
+    signal_estimator::AlsaWriter alsa_writer;
     /* Receive and play samples. */
     for (;;) {
       /* Read samples from receiver.
        * If not enough samples are received, receiver will pad buffer with zeros. */
-      float recv_samples[EXAMPLE_BUFFER_SIZE];
+      float recv_samples[config.buffer_size];
 
       roc_frame frame;
       memset(&frame, 0, sizeof(frame));
 
       frame.samples = recv_samples;
-      frame.samples_size = EXAMPLE_BUFFER_SIZE * sizeof(float);
+      frame.samples_size = frame.samples_size * sizeof(float);
 
       if (roc_receiver_read(receiver, &frame) != 0) {
         break;
-      }
-
-      /* Convert samples to SoX format. */
-      SOX_SAMPLE_LOCALS;
-
-      size_t clips = 0;
-      sox_sample_t out_samples[EXAMPLE_BUFFER_SIZE];
-
-      ssize_t n;
-      for (n = 0; n < EXAMPLE_BUFFER_SIZE; n++) {
-        out_samples[n] = SOX_FLOAT_32BIT_TO_SAMPLE(recv_samples[n], clips);
-      }
-
-      /* Play samples.
-       * SoX will block us until the output device is ready to accept new samples. */
-      if (sox_write(output, out_samples, EXAMPLE_BUFFER_SIZE) != EXAMPLE_BUFFER_SIZE) {
-        LOG(ERROR) << "sox_write";
+      } else {
+        signal_estimator::Frame out_frame(config);
+        ssize_t n;
+        for (n = 0; n < config.buffer_size; n++) {
+          float sampleFloat = recv_samples[n];
+          sampleFloat *= 32767;
+          int16_t sampleInt = (int16_t) sampleFloat;
+          out_frame.add_data(sampleInt);
+        }
+        alsa_writer.write(out_frame);
       }
     }
 
-    if (sox_close(output) != SOX_SUCCESS) {
-      LOG(ERROR) << "sox_close";
-    }
     /* Destroy receiver. */
     if (roc_receiver_close(receiver) != 0) {
       LOG(ERROR) << "roc_receiver_close";

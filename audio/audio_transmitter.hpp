@@ -16,8 +16,6 @@
 #include <roc/receiver.h>
 #include <audio/signal-estimator/src/Config.hpp>
 #include <audio/signal-estimator/src/AlsaReader.hpp>
-
-#include "RtAudio.h"
 #include "utils/log.hpp"
 
 class audio_transmitter {
@@ -30,37 +28,24 @@ class audio_transmitter {
     connection_config connection_config;
     roc_context_config sender_context_config;
     memset(&sender_context_config, 0, sizeof(sender_context_config));
-
-    /* Create sender_context.
-     * Context contains memory pools and the network worker thread(s).
-     * We need a sender_context to create a sender. */
     roc_context *sender_context = roc_context_open(&sender_context_config);
     if (!sender_context) {
       LOG(ERROR) << "roc_sendercontext_open";
     }
 
-    /* Initialize sender config.
-     * Initialize to zero to use default values for unset fields. */
     roc_sender_config sender_config;
     memset(&sender_config, 0, sizeof(sender_config));
 
-    /* Setup input frame format. */
-    sender_config.frame_sample_rate = EXAMPLE_SAMPLE_RATE;
+    signal_estimator::Config config;
+
+    sender_config.frame_sample_rate = config.sample_rate;
     sender_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     sender_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
-
-    /* Turn on sender timing.
-     * Sender must send packets with steady rate, so we should either implement
-     * clocking or ask the library to do so. We choose the second here. */
     sender_config.automatic_timing = 1;
-
-
-    /* Create sender. */
     roc_sender *sender = roc_sender_open(sender_context, &sender_config);
     if (!sender) {
       LOG(ERROR) << "roc_sender_open";
     }
-
     /* Bind sender to a random port. */
     roc_address sender_addr;
     if (roc_address_init(&sender_addr, ROC_AF_AUTO, target_ip.c_str(),
@@ -71,10 +56,6 @@ class audio_transmitter {
     if (roc_sender_bind(sender, &sender_addr) != 0) {
       LOG(ERROR) << "roc_sendersender_bind";
     }
-
-    /* Connect sender to the receiver source (audio) packets port.
-     * The receiver should expect packets with RTP header and Reed-Solomon (m=8) FECFRAME
-    to_addressayload ID on that port. */
     roc_address client_recv_source_addr;
     if (roc_address_init(&client_recv_source_addr, ROC_AF_AUTO, target_ip.c_str(),
                          connection_config.data_port)
@@ -103,16 +84,7 @@ class audio_transmitter {
       LOG(ERROR) << "roc_sender_connect";
     }
 
-
-
-    /* Initialize SoX parameters. */
-    sox_signalinfo_t signal_info;
-    memset(&signal_info, 0, sizeof(signal_info));
-    signal_info.rate = EXAMPLE_SAMPLE_RATE;
-    signal_info.channels = EXAMPLE_NUM_CHANNELS;
-    signal_info.precision = SOX_SAMPLE_PRECISION;
     std::string device = "hw:0,0";
-    signal_estimator::Config config;
     signal_estimator::AlsaReader alsa_reader;
     alsa_reader.open(config, device.c_str());
     /* Open SoX output device. */

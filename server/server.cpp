@@ -208,6 +208,7 @@ awaitable<void> listener(tcp::acceptor acceptor) {
 }
 
 int main(int argc, char *argv[]) {
+
   try {
     if (argc < 2) {
       LOG(DEBUG) << "Usage: chat_server <port> [<port> ...]\n";
@@ -222,7 +223,7 @@ int main(int argc, char *argv[]) {
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
-    std::thread audio_server(audio_socket::init_audio_socket);
+    std::thread audio_server(audio_server_socket::init_audio_socket, 1000, 1001);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
