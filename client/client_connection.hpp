@@ -7,11 +7,11 @@
 #include "utils/common.hpp"
 #include "midi/midi_cue.hpp"
 
-class midi_client :
-    public std::enable_shared_from_this<midi_client> {
+class client_connection :
+    public std::enable_shared_from_this<client_connection> {
  public:
-  midi_client(boost::asio::io_context &io_context,
-              const tcp::resolver::results_type &endpoints)
+  client_connection(boost::asio::io_context &io_context,
+                    const tcp::resolver::results_type &endpoints)
       : socket_(io_context),
         timer_(socket_.get_executor()) {
     assign_uuid();
@@ -26,8 +26,9 @@ class midi_client :
   const std::string &GetUuid() const {
     return uuid;
   }
+
   void SetMidiCue(midi_cue *midi_cue) {
-    midi_client::midi_cue = midi_cue;
+    client_connection::midi_cue = midi_cue;
   }
 
   void do_connect(const tcp::resolver::results_type &endpoints) {
@@ -37,8 +38,9 @@ class midi_client :
                                    co_spawn(socket_.get_executor(),
                                             [this] { return this->reader(); },
                                             detached);
-                                   server_ip = boost::lexical_cast<std::string>(socket_.remote_endpoint());
-                                   LOG(INFO) << "client connected to: " << server_ip << ":" << endpoint.port();
+                                   server_ip = boost::lexical_cast<std::string>(socket_.remote_endpoint().address());
+                                   LOG(INFO) << "client connected to: " << server_ip << ":"
+                                             << socket_.remote_endpoint().port();
                                  } else {
                                    LOG(ERROR) << "connect failed: " << ec.message();
                                  }

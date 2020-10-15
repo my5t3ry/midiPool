@@ -8,7 +8,6 @@
 
 #include "log.hpp"
 #include <alsa/asoundlib.h>
-#include "server_config.hpp"
 
 #include <any>
 #include <utility>
@@ -54,24 +53,18 @@ using boost::asio::ip::tcp;
 #include <unistd.h>
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
-struct midi_message {
-  std::vector<unsigned char> *message_bytes;
-  long int timestamp;
-  int clock_rate;
-};
-
-struct client_properties {
- public:
-  string ip;
-  int data_port;
-  int repair_port;
-};
 
 long int static get_posix_timestamp(int offset = 0) {
   return std::time(0) + offset;
 }
 typedef std::deque<nlohmann::json> midi_message_queue;
 
-#include "client/midi_client.hpp"
+#include "server_config.hpp"
+#include "structs.hpp"
+
+#include "audio/audio_socket.hpp"
+#include "audio/audio_transmitter.hpp"
+
+#include "client/client_connection.hpp"
 
 #endif //MIDIPOOL__COMMON_HPP_

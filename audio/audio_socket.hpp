@@ -152,8 +152,8 @@ class audio_socket {
      * The receiver will expect packets with RTP header and Reed-Solomon (m=8) FECFRAME
      * Source Payload ID on this port. */
     roc_address recv_source_addr;
-    if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, server_config.GetBindAddress().c_str(),
-                         server_config.GetDataPort())
+    if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, server_config.bind_address.c_str(),
+                         server_config.audio_data_port)
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_address_init failed";
     }
@@ -168,8 +168,8 @@ class audio_socket {
      * The receiver will expect packets with Reed-Solomon (m=8) FECFRAME
      * Repair Payload ID on this port. */
     roc_address recv_repair_addr;
-    if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, server_config.GetBindAddress().c_str(),
-                         server_config.GetRepairPort())
+    if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, server_config.bind_address.c_str(),
+                         server_config.audio_repair_port)
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_address_init failed";
     }
@@ -178,8 +178,8 @@ class audio_socket {
         != 0) {
       LOG(ERROR) << "audio socket receiver roc_receiver_bind failed";
     }
-    LOG(INFO) << "audio socket is listening on: " << server_config.GetBindAddress() << "/"
-              << server_config.GetDataPort() << ":" << server_config.GetRepairPort();
+    LOG(INFO) << "audio socket is listening on: " << server_config.bind_address << "/"
+              << server_config.audio_data_port << ":" << server_config.audio_repair_port;
     /* Receive and play samples. */
     for (;;) {
       /* Read samples from receiver.

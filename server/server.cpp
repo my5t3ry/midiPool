@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include <set>
 #include <chrono>
-#include "audio/audio_socket.hpp"
 
 #if defined(WIN32)
 #include <windows.h>
@@ -194,10 +193,10 @@ awaitable<void> listener(tcp::acceptor acceptor) {
   session_room room;
   server_config server_config;
   std::thread midi_clock_thread(midi_clock,
-                                server_config.GetTickInterval(),
-                                server_config.GetLoopLength(),
+                                server_config.tick_interval,
+                                server_config.loop_length,
                                 &room,
-                                server_config.GetMidiBuffer());
+                                server_config.midi_buffer);
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
