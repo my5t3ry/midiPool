@@ -8,6 +8,7 @@
 
 #include "log.hpp"
 #include <alsa/asoundlib.h>
+#include "server_config.hpp"
 
 #include <any>
 #include <utility>
@@ -29,6 +30,8 @@
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/use_awaitable.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/lexical_cast.hpp>
+
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -55,6 +58,13 @@ struct midi_message {
   std::vector<unsigned char> *message_bytes;
   long int timestamp;
   int clock_rate;
+};
+
+struct client_properties {
+ public:
+  string ip;
+  int data_port;
+  int repair_port;
 };
 
 long int static get_posix_timestamp(int offset = 0) {

@@ -37,7 +37,8 @@ class midi_client :
                                    co_spawn(socket_.get_executor(),
                                             [this] { return this->reader(); },
                                             detached);
-                                   LOG(INFO) << "client connected to: " << endpoint.address() << ":" << endpoint.port();
+                                   server_ip = boost::lexical_cast<std::string>(socket_.remote_endpoint());
+                                   LOG(INFO) << "client connected to: " << server_ip << ":" << endpoint.port();
                                  } else {
                                    LOG(ERROR) << "connect failed: " << ec.message();
                                  }
@@ -98,6 +99,7 @@ class midi_client :
  private:
   tcp::socket socket_;
   midi_cue *midi_cue;
+  std::string server_ip;
   boost::asio::steady_timer timer_;
   std::string uuid;
   int writing = 0;

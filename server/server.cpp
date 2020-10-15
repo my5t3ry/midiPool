@@ -1,9 +1,8 @@
 #include "utils/common.hpp"
-#include "server_config.hpp"
 #include <cstdlib>
 #include <set>
 #include <chrono>
-#include "audio/audio_server.hpp"
+#include "audio/audio_socket.hpp"
 
 #if defined(WIN32)
 #include <windows.h>
@@ -13,7 +12,6 @@
 #define SLEEP(milliseconds) usleep( (unsigned long) (milliseconds * 1000.0) )
 #endif
 
-const server_config server_config;
 class chat_participant {
  public:
   virtual ~chat_participant() {}
@@ -62,8 +60,10 @@ class client_session
   client_session(tcp::socket socket, session_room &room)
       : socket_(std::move(socket)),
         timer_(socket_.get_executor()),
+        client_ip_(boost::lexical_cast<std::string>(socket_.remote_endpoint())),
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
+    LOG(INFO) << "client has ip:" << client_ip_;
   }
 
   void start() {
@@ -133,13 +133,14 @@ class client_session
   tcp::socket socket_;
   boost::asio::steady_timer timer_;
   session_room &room_;
+  string client_ip_;
   std::deque<nlohmann::json> write_msgs_;
 };
 
 void send_start_message(int clock_rate, session_room *room, long midi_buffer);
-void midi_clock(int clock_rate, session_room *room, long midi_buffer = 500) {
+void midi_clock(int clock_rate, int loop_length, session_room *room, long midi_buffer = 500) {
   int k = 0, four_bars = 0;
-  int num_four_bars = server_config.GetLoopLength();
+  int num_four_bars = loop_length;
   LOG(INFO) << "Generating clock at"
             << " BPM:"
             << (60.0 / 24.0 / clock_rate * 1000.0)
@@ -191,7 +192,12 @@ void send_start_message(int clock_rate, session_room *room, long midi_buffer) {
 
 awaitable<void> listener(tcp::acceptor acceptor) {
   session_room room;
-  std::thread midi_clock_thread(midi_clock, server_config.GetTickInterval(), &room, server_config.GetMidiBuffer());
+  server_config server_config;
+  std::thread midi_clock_thread(midi_clock,
+                                server_config.GetTickInterval(),
+                                server_config.GetLoopLength(),
+                                &room,
+                                server_config.GetMidiBuffer());
   for (;;) {
     const std::shared_ptr<client_session> &session = std::make_shared<client_session>(
         co_await acceptor.async_accept(use_awaitable),
@@ -208,6 +214,7 @@ int main(int argc, char *argv[]) {
       LOG(DEBUG) << "Usage: chat_server <port> [<port> ...]\n";
       return 1;
     }
+
     boost::asio::io_context io_context(1);
     for (int i = 1; i < argc; ++i) {
       unsigned short port = std::atoi(argv[i]);
@@ -216,7 +223,7 @@ int main(int argc, char *argv[]) {
                listener(tcp::acceptor(io_context, {tcp::v4(), port})),
                detached);
     }
-    std::thread audio_server(audio_server::init_audio_server);
+    std::thread audio_server(audio_socket::init_audio_server);
     boost::asio::signal_set signals(io_context, SIGINT, SIGTERM);
     signals.async_wait([&](auto, auto) { io_context.stop(); });
     io_context.run();
