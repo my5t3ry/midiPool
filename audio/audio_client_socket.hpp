@@ -113,7 +113,7 @@ class audio_client_socket {
       } else {
         signal_estimator::Frame out_frame(config);
         ssize_t n;
-        for (n = 0; n < config.buffer_size; n++) {
+        for (n = 0; n < sizeof(frame.samples_size) / sizeof(float); n++) {
           float sampleFloat = recv_samples[n];
           out_frame.add_data(sampleFloat);
         }

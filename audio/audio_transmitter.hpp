@@ -84,7 +84,8 @@ class audio_transmitter {
       LOG(ERROR) << "roc_sender_connect";
     }
 
-    std::string device = "default";
+    std::string device = "plughw:PCH,0:0";
+    config.format = SND_PCM_FORMAT_FLOAT;
     signal_estimator::AlsaReader alsa_reader;
     alsa_reader.open(config, device.c_str());
     /* Open SoX output device. */
