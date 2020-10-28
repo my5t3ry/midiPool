@@ -38,8 +38,8 @@ message (WARNING "libasound found: ${ALSA_FOUND}  ${ALSA_LIBRARIES}")
 link_directories (${Boost_LIBRARY_DIRS} /usr/lib/ /home/my5t3ry/codeBase/c/boost/boost_1_74_0/stage /usr/lib/c++ /home/my5t3ry/packages/libc++/src/build/lib/ /home/my5t3ry/packages/libc++/pkg/libc++abi/usr/lib/)
 include_directories (${Boost_INCLUDE_DIRS} ${ALSA_INCLUDE_DIRS} ./audio/signal-estimator/src home/my5t3ry/codeBase/c/boost/boost_1_74_0 /usr/x86_64-linux-gnu/include/c++/8/ext/pb_ds/)
 
-target_link_libraries (client ${ALSA_LIBRARIES} roc uv unwind sox sndio asound dl c++abi c++ pthread ${Boost_LIBRARIES})
-target_link_libraries (server ${ALSA_LIBRARIES} roc uv unwind sox sndio
+target_link_libraries (client ${ALSA_LIBRARIES} roc uv unwind sox sndio asound soundio dl c++abi c++ pthread ${Boost_LIBRARIES})
+target_link_libraries (server ${ALSA_LIBRARIES} roc uv unwind sox sndio soundio
     c++abi dl c++ pthread ${Boost_LIBRARIES} asound)
 
 #

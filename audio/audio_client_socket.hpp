@@ -93,9 +93,9 @@ class audio_client_socket {
     if (!sender_context) {
       LOG(ERROR) << "roc_sendercontext_open";
     }
-    std::string device = "default";
-    signal_estimator::AlsaWriter alsa_writer;
-    alsa_writer.open(config, device.c_str());
+//    std::string device = "default";
+//    signal_estimator::AlsaWriter alsa_writer;
+//    alsa_writer.open(config, device.c_str());
     /* Receive and play samples. */
     for (;;) {
       /* Read samples from receiver.
@@ -117,7 +117,7 @@ class audio_client_socket {
           float sampleFloat = recv_samples[n];
           out_frame.add_data(sampleFloat);
         }
-        alsa_writer.write(out_frame);
+//        alsa_writer.write(out_frame);
       }
     }
 
