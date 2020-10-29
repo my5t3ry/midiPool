@@ -97,6 +97,9 @@ class audio_server_socket {
     receiver_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     receiver_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
     receiver_config.resampler_profile = ROC_RESAMPLER_DISABLE;
+//    receiver_config.max_latency_overrun =  500000LL;
+//    receiver_config.max_latency_underrun = 20000LL;
+    receiver_config.target_latency = 6000000000LL;
     receiver_config.automatic_timing = 1;
     roc_receiver *receiver = roc_receiver_open(context, &receiver_config);
     if (!receiver) {

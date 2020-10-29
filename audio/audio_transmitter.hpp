@@ -64,7 +64,7 @@ class audio_transmitter {
   }
   static void overflow_callback(struct SoundIoInStream *instream) {
     static int count = 0;
-    LOG(ERROR) << "overflow " << ++count;
+    LOG(DEBUG) << "overflow " << ++count;
   }
   static void read_callback(struct SoundIoInStream *instream, int frame_count_min, int frame_count_max) {
     struct SoundIoChannelArea *areas;
@@ -73,7 +73,7 @@ class audio_transmitter {
     int free_bytes = soundio_ring_buffer_free_count(ring_buffer);
     int free_count = free_bytes / instream->bytes_per_frame;
     if (frame_count_min > free_count)
-      LOG(ERROR) << "ring buffer overflow";
+      LOG(DEBUG) << "ring buffer overflow";
     int write_frames = min_int(free_count, frame_count_max);
     int frames_left = write_frames;
     for (;;) {
@@ -86,7 +86,7 @@ class audio_transmitter {
         // Due to an overflow there is a hole. Fill the ring buffer with
         // silence for the size of the hole.
         memset(write_ptr, 0, frame_count * instream->bytes_per_frame);
-        LOG(ERROR) << "Dropped " << frame_count << " frames due to internal overflow";
+        LOG(DEBUG) << "Dropped " << frame_count << " frames due to internal overflow";
       } else {
         for (int frame = 0; frame < frame_count; frame += 1) {
           for (int ch = 0; ch < instream->layout.channel_count; ch += 1) {
@@ -109,7 +109,7 @@ class audio_transmitter {
   static void initInputStreamReader(roc_sender *p_sender) {
     enum SoundIoBackend backend = SoundIoBackendNone;
     char *device_id = NULL;
-    bool is_raw = true;
+    bool is_raw = false;
     backend = SoundIoBackendAlsa;
 
     struct SoundIo *soundio = soundio_create();
@@ -130,7 +130,6 @@ class audio_transmitter {
     if (default_in_device_index >= 0) {
       for (int i = 0; i < soundio_input_device_count(soundio); i += 1) {
         struct SoundIoDevice *device = soundio_get_input_device(soundio, i);
-
         if (device->is_raw == is_raw) {
           selected_device = device;
           break;
@@ -143,7 +142,7 @@ class audio_transmitter {
     } else {
       LOG(ERROR) << "No input devices available.";
     }
-    LOG(ERROR) << "input Device: " << selected_device->name;
+    LOG(DEBUG) << "input Device: " << selected_device->name;
     if (selected_device->probe_error) {
       LOG(ERROR) << "Unable to probe device: " << soundio_strerror(selected_device->probe_error);
     }
@@ -181,7 +180,7 @@ class audio_transmitter {
     if ((err = soundio_instream_open(instream))) {
       LOG(ERROR) << "unable to open input stream: " << soundio_strerror(err);
     }
-    LOG(ERROR) << instream->layout.name << " " << sample_rate << " " << soundio_format_string(fmt) << " interleaved";
+    LOG(DEBUG) << instream->layout.name << " " << sample_rate << " " << soundio_format_string(fmt) << " interleaved";
     const int ring_buffer_duration_seconds = 30;
     int capacity = ring_buffer_duration_seconds * instream->sample_rate * instream->bytes_per_frame;
     ring_buffer = soundio_ring_buffer_create(soundio, capacity);
@@ -231,8 +230,10 @@ class audio_transmitter {
     sender_config.frame_sample_rate = config.sample_rate;
     sender_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     sender_config.resampler_profile = ROC_RESAMPLER_DISABLE;
+
     sender_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
     sender_config.automatic_timing = 1;
+
     roc_sender *sender = roc_sender_open(sender_context, &sender_config);
     if (!sender) {
       LOG(ERROR) << "roc_sender_open";

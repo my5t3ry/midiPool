@@ -55,6 +55,37 @@ static void (*write_sample)(char *ptr, float sample);
 
 class audio_client_socket {
  public:
+  static void read_samples(float *samples, int frame_count_min, int frame_count_max) {
+    char *write_ptr = soundio_ring_buffer_write_ptr(out_ring_buffer);
+    int free_bytes = soundio_ring_buffer_free_count(out_ring_buffer);
+    int free_count = free_bytes / sizeof(float);
+    LOG(DEBUG) << "free_count:" << free_count;
+    LOG(DEBUG) << "write_ptr:" << write_ptr;
+
+    if (frame_count_min > free_count)
+      LOG(DEBUG) << "ring buffer overflow";
+    int write_frames = min_int(free_count, frame_count_max);
+    LOG(DEBUG) << "write_frames:" << write_frames;
+
+    int frames_left = write_frames;
+    LOG(DEBUG) << "frames_left:" << frames_left;
+
+    for (;;) {
+      int frame_count = frames_left;
+      for (int frame = 0; frame < frame_count; frame += 1) {
+        write_sample(write_ptr, samples[frame]);
+        LOG(DEBUG) << "cursample :" << samples[frame];
+        write_ptr += sizeof(float);
+      }
+      frames_left -= frame_count;
+      if (frames_left <= 0)
+        break;
+    }
+    int advance_bytes = write_frames * sizeof(float);
+    LOG(DEBUG) << "advance_bytes:" << advance_bytes;
+
+    soundio_ring_buffer_advance_write_ptr(out_ring_buffer, advance_bytes);
+  }
   static int min_int(int a, int b) {
     return (a < b) ? a : b;
   }
@@ -79,15 +110,17 @@ class audio_client_socket {
     *buf = sample;
   }
   static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max) {
-//    LOG(DEBUG) << "write_callback frame_count_min: " << frame_count_min << " frame_count_max: " << frame_count_max
-//               << " ring buffer filled: " << soundio_ring_buffer_fill_count(out_ring_buffer);
+
     struct SoundIoChannelArea *areas;
     int frames_left;
     int frame_count;
     int err;
     char *read_ptr = soundio_ring_buffer_read_ptr(out_ring_buffer);
     int fill_bytes = soundio_ring_buffer_fill_count(out_ring_buffer);
-    int fill_count = fill_bytes / outstream->bytes_per_frame;
+    int fill_count = fill_bytes / sizeof(float);
+//    LOG(DEBUG) << "write_callback frame_count_min: " << frame_count_min << " frame_count_max: " << frame_count_max
+//               << " ring buffer filled: " << fill_count
+//               << " ring buffer bytes filled: " << fill_bytes;
     if (frame_count_min > fill_count) {
       // Ring buffer does not have enough data, fill with zeroes.
       frames_left = frame_count_min;
@@ -101,7 +134,7 @@ class audio_client_socket {
           return;
         for (int frame = 0; frame < frame_count; frame += 1) {
           for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-            memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
+            memset(areas[ch].ptr, 0, sizeof(float));
             areas[ch].ptr += areas[ch].step;
           }
         }
@@ -120,16 +153,16 @@ class audio_client_socket {
         break;
       for (int frame = 0; frame < frame_count; frame += 1) {
         for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-          memcpy(areas[ch].ptr, read_ptr, outstream->bytes_per_sample);
+          memcpy(areas[ch].ptr, read_ptr, sizeof(float));
           areas[ch].ptr += areas[ch].step;
-          read_ptr += outstream->bytes_per_sample;
+          read_ptr += sizeof(float);
         }
       }
       if ((err = soundio_outstream_end_write(outstream)))
         LOG(DEBUG) << "end write error: %s" << soundio_strerror(err);
       frames_left -= frame_count;
     }
-    soundio_ring_buffer_advance_read_ptr(out_ring_buffer, read_count * outstream->bytes_per_frame);
+    soundio_ring_buffer_advance_read_ptr(out_ring_buffer, read_count * sizeof(float));
   }
   static void underflow_callback(struct SoundIoOutStream *outstream) {
     static int count = 0;
@@ -226,6 +259,7 @@ class audio_client_socket {
     } else {
       LOG(ERROR) << "No suitable selected_device format available.";
     }
+    LOG(INFO) << "output format: " << out_prioritized_formats[outstream->format];
     if ((err = soundio_outstream_open(outstream))) {
       LOG(ERROR) << "unable to open selected_device: " << soundio_strerror(err);
     }
@@ -233,14 +267,12 @@ class audio_client_socket {
 
     if (outstream->layout_error)
       LOG(ERROR) << "unable to set channel layout: " << soundio_strerror(outstream->layout_error);
-    if ((err = soundio_outstream_start(outstream))) {
-      LOG(ERROR) << "unable to start device: " << soundio_strerror(err);
-    }
-    int capacity = outstream->software_latency * 2 * outstream->sample_rate * outstream->bytes_per_frame;
+
+    int capacity = outstream->software_latency * outstream->sample_rate * outstream->bytes_per_frame;
     out_ring_buffer = soundio_ring_buffer_create(soundio, capacity);
+    bool output_stream_started = false;
     if (!out_ring_buffer)
       LOG(ERROR) << "unable to create ring buffer: out of memory";
-    char *buf = soundio_ring_buffer_write_ptr(out_ring_buffer);
     for (;;) {
       soundio_flush_events(soundio);
       LOG(DEBUG) << "flush_events";
@@ -252,23 +284,15 @@ class audio_client_socket {
       if (roc_receiver_read(p_receiver, &frame) != 0) {
         break;
       } else {
-        memset(buf, 0, frame.samples_size);
-        int free_bytes = soundio_ring_buffer_free_count(out_ring_buffer);
-        int free_count = free_bytes / sizeof(float);
-        LOG(DEBUG) << "free_count:" << free_count;
-        LOG(DEBUG) << "frame.samples_size:" << frame.samples_size;
-        if (frame.samples_size > free_count) {
-          LOG(ERROR) << "ring buffer loop overflow";
-          break;
-        }
-        for (int frameIndex = 0; frameIndex < frame.samples_size; frameIndex += 1) {
-          write_sample(buf, recv_samples[frameIndex]);
-          buf += sizeof(float);
+        read_samples(recv_samples, config.buffer_size, config.buffer_size);
+        if (!output_stream_started) {
+          if ((err = soundio_outstream_start(outstream))) {
+            LOG(ERROR) << "unable to start device: " << soundio_strerror(err);
+          }
+          output_stream_started = true;
         }
       }
-
-      int advance_bytes = frame.samples_size;
-      soundio_ring_buffer_advance_write_ptr(out_ring_buffer, advance_bytes);
+      sleep(1);
     }
     soundio_outstream_destroy(outstream);
     soundio_device_unref(selected_device);
@@ -302,6 +326,9 @@ class audio_client_socket {
     receiver_config.frame_sample_rate = config.sample_rate;
     receiver_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     receiver_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
+//    receiver_config.max_latency_overrun =  500000LL;
+//    receiver_config.max_latency_underrun = 20000LL;
+    receiver_config.target_latency = 6000000000LL;
     receiver_config.automatic_timing = 1;
 
     /* Create receiver. */
