@@ -7,6 +7,7 @@
 using namespace std;
 
 enum typelog {
+  TRACE,
   DEBUG,
   INFO,
   WARN,
@@ -56,6 +57,8 @@ class LOG {
       case WARN: label = "WARN ";
         break;
       case ERROR: label = "ERROR";
+        break;
+      case TRACE: label = "TRACE";
         break;
     }
     return label;

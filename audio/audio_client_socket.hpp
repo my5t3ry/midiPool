@@ -17,6 +17,7 @@
 #include <roc/receiver.h>
 #include <audio/signal-estimator/src/Config.hpp>
 #include <audio/signal-estimator/src/AlsaWriter.hpp>
+#include <utils/common.hpp>
 
 #include "utils/log.hpp"
 
@@ -55,36 +56,36 @@ static void (*write_sample)(char *ptr, float sample);
 
 class audio_client_socket {
  public:
-  static void read_samples(float *samples, int frame_count_min, int frame_count_max) {
+  static void read_samples(float *samples, int sample_count_min, int sample_count_max, SoundIoOutStream *out_stream) {
     char *write_ptr = soundio_ring_buffer_write_ptr(out_ring_buffer);
     int free_bytes = soundio_ring_buffer_free_count(out_ring_buffer);
-    int free_count = free_bytes / sizeof(float);
-    LOG(DEBUG) << "free_count:" << free_count;
+    int free_samples = free_bytes / out_stream->bytes_per_sample;
+    int queued_samples = min_int(free_samples, sample_count_max);
+    int samples_left = queued_samples;
+
+    if (sample_count_min > free_samples) {
+      LOG(WARN) << "ring buffer overflow";
+    }
+
+    LOG(DEBUG) << "write_frames: " << queued_samples;
+    LOG(DEBUG) << "frames_left: " << samples_left;
+    LOG(DEBUG) << "free_count:" << free_samples;
     LOG(DEBUG) << "write_ptr:" << write_ptr;
 
-    if (frame_count_min > free_count)
-      LOG(DEBUG) << "ring buffer overflow";
-    int write_frames = min_int(free_count, frame_count_max);
-    LOG(DEBUG) << "write_frames:" << write_frames;
-
-    int frames_left = write_frames;
-    LOG(DEBUG) << "frames_left:" << frames_left;
-
     for (;;) {
-      int frame_count = frames_left;
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        write_sample(write_ptr, samples[frame]);
-        LOG(DEBUG) << "cursample :" << samples[frame];
-        write_ptr += sizeof(float);
+      int sample_count = samples_left;
+      for (int cur_sample = 0; cur_sample < sample_count; cur_sample += 1) {
+        write_sample(write_ptr, samples[cur_sample]);
+        write_ptr += out_stream->bytes_per_sample;
+        LOG(TRACE) << "current sample: " << samples[cur_sample];
       }
-      frames_left -= frame_count;
-      if (frames_left <= 0)
+      samples_left -= sample_count;
+      if (samples_left <= 0)
         break;
     }
-    int advance_bytes = write_frames * sizeof(float);
-    LOG(DEBUG) << "advance_bytes:" << advance_bytes;
-
+    int advance_bytes = queued_samples * out_stream->bytes_per_sample;
     soundio_ring_buffer_advance_write_ptr(out_ring_buffer, advance_bytes);
+    LOG(DEBUG) << "ring buffer write ptr advance_bytes:" << advance_bytes;
   }
   static int min_int(int a, int b) {
     return (a < b) ? a : b;
@@ -110,19 +111,18 @@ class audio_client_socket {
     *buf = sample;
   }
   static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max) {
-
     struct SoundIoChannelArea *areas;
     int frames_left;
     int frame_count;
     int err;
     char *read_ptr = soundio_ring_buffer_read_ptr(out_ring_buffer);
     int fill_bytes = soundio_ring_buffer_fill_count(out_ring_buffer);
-    int fill_count = fill_bytes / sizeof(float);
-//    LOG(DEBUG) << "write_callback frame_count_min: " << frame_count_min << " frame_count_max: " << frame_count_max
-//               << " ring buffer filled: " << fill_count
-//               << " ring buffer bytes filled: " << fill_bytes;
+    int fill_count = fill_bytes / outstream->bytes_per_frame;
+    LOG(DEBUG) << "write_callback frame_count_min: " << frame_count_min << " frame_count_max: " << frame_count_max
+               << " ring buffer filled: " << fill_count
+               << " ring buffer bytes filled: " << fill_bytes;
     if (frame_count_min > fill_count) {
-      // Ring buffer does not have enough data, fill with zeroes.
+      LOG(DEBUG) << "No frames in buffer.";
       frames_left = frame_count_min;
       for (;;) {
         frame_count = frames_left;
@@ -134,52 +134,57 @@ class audio_client_socket {
           return;
         for (int frame = 0; frame < frame_count; frame += 1) {
           for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-            memset(areas[ch].ptr, 0, sizeof(float));
+            memset(areas[ch].ptr, 0, outstream->bytes_per_sample);
+            write_sample(areas[ch].ptr, 0.0f);
             areas[ch].ptr += areas[ch].step;
+          }
+        }
+        if ((err = soundio_outstream_end_write(outstream)))
+          LOG(DEBUG) << "end write error: %s" << soundio_strerror(err);
+        frames_left = frame_count;
+      }
+    } else {
+      LOG(DEBUG) << "flushing frames from ring buffer.";
+      int read_count = min_int(frame_count_max, fill_count);
+      frames_left = read_count;
+      while (frames_left > 0) {
+        int frame_count = frames_left;
+        if ((err = soundio_outstream_begin_write(outstream, &areas, &frame_count)))
+          LOG(DEBUG) << "begin write error: " << soundio_strerror(err);
+        if (frame_count <= 0)
+          break;
+        for (int frame = 0; frame < frame_count; frame += 1) {
+          for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
+            memcpy(areas[ch].ptr, read_ptr, outstream->bytes_per_sample);
+            areas[ch].ptr += areas[ch].step;
+            read_ptr += outstream->bytes_per_sample;
           }
         }
         if ((err = soundio_outstream_end_write(outstream)))
           LOG(DEBUG) << "end write error: %s" << soundio_strerror(err);
         frames_left -= frame_count;
       }
+      LOG(DEBUG) << "frames flushed: " << read_count;
+      soundio_ring_buffer_advance_read_ptr(out_ring_buffer, read_count * outstream->bytes_per_frame);
     }
-    int read_count = min_int(frame_count_max, fill_count);
-    frames_left = read_count;
-    while (frames_left > 0) {
-      int frame_count = frames_left;
-      if ((err = soundio_outstream_begin_write(outstream, &areas, &frame_count)))
-        LOG(DEBUG) << "begin write error: %s" << soundio_strerror(err);
-      if (frame_count <= 0)
-        break;
-      for (int frame = 0; frame < frame_count; frame += 1) {
-        for (int ch = 0; ch < outstream->layout.channel_count; ch += 1) {
-          memcpy(areas[ch].ptr, read_ptr, sizeof(float));
-          areas[ch].ptr += areas[ch].step;
-          read_ptr += sizeof(float);
-        }
-      }
-      if ((err = soundio_outstream_end_write(outstream)))
-        LOG(DEBUG) << "end write error: %s" << soundio_strerror(err);
-      frames_left -= frame_count;
-    }
-    soundio_ring_buffer_advance_read_ptr(out_ring_buffer, read_count * sizeof(float));
-  }
-  static void underflow_callback(struct SoundIoOutStream *outstream) {
-    static int count = 0;
-    LOG(ERROR) << "underflow %d" << count++;
   }
 
-  static void initOutputStream(roc_receiver *p_receiver, signal_estimator::Config config) {
+  static
+  void underflow_callback(struct SoundIoOutStream *outstream) {
+    static int count = 0;
+    LOG(ERROR) << "underflow" << count++;
+  }
+
+  static void initReceiver(roc_receiver *p_receiver, signal_estimator::Config config) {
     char *stream_name = NULL;
     double latency = 0.0;
     enum SoundIoBackend backend = SoundIoBackendNone;
-    char *device_id = nullptr;
     bool is_raw = false;
     backend = SoundIoBackendAlsa;
 
     struct SoundIo *soundio = soundio_create();
     if (!soundio) {
-      LOG(ERROR) << "out of memory\n";
+      LOG(ERROR) << "out of memory";
     }
     int err = (backend == SoundIoBackendNone) ?
               soundio_connect(soundio) : soundio_connect_backend(soundio, backend);
@@ -187,15 +192,14 @@ class audio_client_socket {
       LOG(ERROR) << "error connecting: " << soundio_strerror(err);
     }
     soundio_flush_events(soundio);
-    int default_in_device_index = soundio_default_output_device_index(soundio);
-    if (default_in_device_index < 0)
+    int default_out_device_index = soundio_default_output_device_index(soundio);
+    if (default_out_device_index < 0)
       LOG(ERROR) << "no input device found";
 
     struct SoundIoDevice *selected_device = NULL;
-    if (default_in_device_index >= 0) {
+    if (default_out_device_index >= 0) {
       for (int i = 0; i < soundio_input_device_count(soundio); i += 1) {
         struct SoundIoDevice *device = soundio_get_output_device(soundio, i);
-
         if (device->is_raw == is_raw) {
           selected_device = device;
           break;
@@ -203,10 +207,10 @@ class audio_client_socket {
         soundio_device_unref(device);
       }
       if (!selected_device) {
-        LOG(ERROR) << "Invalid device id: " << default_in_device_index;
+        LOG(ERROR) << "invalid device id: " << default_out_device_index;
       }
     } else {
-      LOG(ERROR) << "No output devices available.";
+      LOG(ERROR) << "no output devices available";
     }
     LOG(ERROR) << "output Device: " << selected_device->name;
     if (selected_device->probe_error) {
@@ -259,11 +263,12 @@ class audio_client_socket {
     } else {
       LOG(ERROR) << "No suitable selected_device format available.";
     }
-    LOG(INFO) << "output format: " << out_prioritized_formats[outstream->format];
+
+    LOG(DEBUG) << "output format: " << out_prioritized_formats[outstream->format];
     if ((err = soundio_outstream_open(outstream))) {
       LOG(ERROR) << "unable to open selected_device: " << soundio_strerror(err);
     }
-    LOG(ERROR) << "Software latency: " << outstream->software_latency;
+    LOG(DEBUG) << "Software latency: " << outstream->software_latency;
 
     if (outstream->layout_error)
       LOG(ERROR) << "unable to set channel layout: " << soundio_strerror(outstream->layout_error);
@@ -284,7 +289,7 @@ class audio_client_socket {
       if (roc_receiver_read(p_receiver, &frame) != 0) {
         break;
       } else {
-        read_samples(recv_samples, config.buffer_size, config.buffer_size);
+        read_samples(recv_samples, config.buffer_size, config.buffer_size, outstream);
         if (!output_stream_started) {
           if ((err = soundio_outstream_start(outstream))) {
             LOG(ERROR) << "unable to start device: " << soundio_strerror(err);
@@ -292,7 +297,7 @@ class audio_client_socket {
           output_stream_started = true;
         }
       }
-      sleep(1);
+      SLEEP(2000);
     }
     soundio_outstream_destroy(outstream);
     soundio_device_unref(selected_device);
@@ -302,26 +307,18 @@ class audio_client_socket {
     roc_log_set_level(ROC_LOG_DEBUG);
     signal_estimator::Config config;
     std::string bind_address = "127.0.0.1";
-    /* Initialize context config.
-     * Initialize to zero to use default values for all fields. */
     roc_context_config context_config;
     memset(&context_config, 0, sizeof(context_config));
 
-    /* Create context.
-     * Context contains memory pools and the network worker thread(s).
-     * We need a context to create a receiver. */
     roc_context *context = roc_context_open(&context_config);
     if (!context) {
       LOG(ERROR) << "audio socket receiver roc_context_open failed";
     }
 
-    /* Initialize receiver config.
-     * We use default values. */
     roc_receiver_config receiver_config;
 
     memset(&receiver_config, 0, sizeof(receiver_config));
 
-    /* Setup output frame format. */
     receiver_config.resampler_profile = ROC_RESAMPLER_DISABLE;
     receiver_config.frame_sample_rate = config.sample_rate;
     receiver_config.frame_channels = ROC_CHANNEL_SET_STEREO;
@@ -336,10 +333,6 @@ class audio_client_socket {
     if (!receiver) {
       LOG(ERROR) << "audio socket receiver roc_receiver_open failed";
     }
-
-    /* Bind receiver to the source (audio) packets port.
-     * The receiver will expect packets with RTP header and Reed-Solomon (m=8) FECFRAME
-     * Source Payload ID on this port. */
     roc_address recv_source_addr;
     if (roc_address_init(&recv_source_addr, ROC_AF_AUTO, bind_address.c_str(),
                          audio_data_port_)
@@ -353,9 +346,6 @@ class audio_client_socket {
       LOG(ERROR) << "audio socket receiver roc_receiver_bind failed";
     }
 
-    /* Bind receiver to the repair (FEC) packets port.
-     * The receiver will expect packets with Reed-Solomon (m=8) FECFRAME
-     * Repair Payload ID on this port. */
     roc_address recv_repair_addr;
     if (roc_address_init(&recv_repair_addr, ROC_AF_AUTO, bind_address.c_str(),
                          audio_repair_port_)
@@ -371,7 +361,7 @@ class audio_client_socket {
               << audio_data_port_ << ":" << audio_repair_port_;
 
     /* Receive and play samples. */
-    initOutputStream(receiver, config);
+    initReceiver(receiver, config);
 
     /* Destroy receiver. */
     if (roc_receiver_close(receiver) != 0) {
