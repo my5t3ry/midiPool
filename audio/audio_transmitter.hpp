@@ -83,8 +83,6 @@ class audio_transmitter {
       if (!frame_count)
         break;
       if (!areas) {
-        // Due to an overflow there is a hole. Fill the ring buffer with
-        // silence for the size of the hole.
         memset(write_ptr, 0, frame_count * instream->bytes_per_frame);
         LOG(DEBUG) << "Dropped " << frame_count << " frames due to internal overflow";
       } else {
@@ -190,9 +188,7 @@ class audio_transmitter {
     if ((err = soundio_instream_start(instream))) {
       LOG(ERROR) << "unable to start input device: " << soundio_strerror(err);
     }
-    // Note: in this example, if you send SIGINT (by pressing Ctrl+C for example)
-    // you will lose up to 1 second of recorded audio data. In non-example code,
-    // consider a better shutdown strategy.
+
     for (;;) {
       soundio_flush_events(soundio);
       sleep(1);
@@ -209,6 +205,7 @@ class audio_transmitter {
       soundio_ring_buffer_advance_read_ptr(ring_buffer, fill_bytes);
     }
   }
+
   static void init_audio_transmitter(void *target_ip_ptr) {
     std::string target_ip = *reinterpret_cast<std::string *>(target_ip_ptr);
     roc_log_set_level(ROC_LOG_DEBUG);
@@ -261,9 +258,6 @@ class audio_transmitter {
       LOG(ERROR) << "roc_sender_connect";
     }
 
-    /* Connect sender to the receiver repair (FEC) packets port.
-     * The receiver should expect packets with Reed-Solomon (m=8) FECFRAME
-     * Repair Payload ID on that port. */
     roc_address client_recv_repair_addr;
     if (roc_address_init(&client_recv_repair_addr, ROC_AF_AUTO, target_ip.c_str(),
                          connection_config.repair_port)
@@ -280,16 +274,12 @@ class audio_transmitter {
 //    config.format = SND_PCM_FORMAT_FLOAT;
 //    signal_estimator::AlsaReader alsa_reader;
 //    alsa_reader.open(config, device.c_str());
-    /* Open SoX output device. */
-    /* Receive and play samples. */
     initInputStreamReader(sender);
 
-    /* Destroy sender. */
     if (roc_sender_close(sender) != 0) {
       LOG(ERROR) << "roc_sender_close";
     }
 
-    /* Destroy context. */
     if (roc_context_close(sender_context) != 0) {
       LOG(ERROR) << "roc_context_close";
     }

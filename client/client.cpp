@@ -14,7 +14,6 @@ int main(int argc, char *argv[]) {
       return 1;
     }
     string target_ip = boost::lexical_cast<std::string>(argv[1]);
-
     std::thread audio_transmitter
         (audio_transmitter::init_audio_transmitter, &target_ip);
     std::thread audio_socket

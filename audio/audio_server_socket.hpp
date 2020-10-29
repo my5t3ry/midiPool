@@ -134,7 +134,7 @@ class audio_server_socket {
       if (roc_receiver_read(receiver, &frame) != 0) {
         break;
       } else {
-//        LOG(DEBUG) << "forwarding frame with size: " << &frame.samples_size;
+        LOG(TRACE) << "forwarding frame with size: " << &frame.samples_size;
         if (!senders.empty()) {
           roc_sender_write(senders.data()[0], &frame);
         }

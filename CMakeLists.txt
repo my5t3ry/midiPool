@@ -32,7 +32,7 @@ set (Boost_USE_MULTITHREADED ON)
 set (Boost_USE_STATIC_RUNTIME ON)
 include_directories (/home/my5t3ry/codeBase/c/nuklear-cpp/include)
 add_executable (client-ui
-    client/client_ui.cc
+    client/client_ui.cpp
     /home/my5t3ry/codeBase/c/nuklear-cpp/include/nuklear_lib.h
     /home/my5t3ry/codeBase/c/nuklear-cpp/include/nuklear.h
     /home/my5t3ry/codeBase/c/nuklear-cpp/src/nuklear_lib.cpp

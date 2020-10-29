@@ -66,7 +66,6 @@ class client_connection :
                                                                    (int) cur_message["meta"]["clock_rate"]);
           midi_cue->cue_midi_message(midi_message);
           LOG(DEBUG) << "adding midi message:" << cur_message.dump();
-
           read_msg.erase(0, n);
           SLEEP(10);
         }
