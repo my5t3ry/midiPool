@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
 
   try {
     if (argc < 2) {
-      LOG(DEBUG) << "Usage: chat_server <port> [<port> ...]\n";
+      LOG(DEBUG) << "Usage: midiPool server <port> [<port> ...]\n";
       return 1;
     }
     const thread &server_thread = audio_server.spawn();
