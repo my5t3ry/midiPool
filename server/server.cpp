@@ -61,11 +61,11 @@ class client_session
   client_session(tcp::socket socket, session_room &room)
       : socket_(std::move(socket)),
         timer_(socket_.get_executor()),
-        client_ip_(boost::lexical_cast<std::string>(socket_.remote_endpoint())),
+        client_ip_(socket_.remote_endpoint().address().to_string()),
         room_(room) {
     timer_.expires_at(std::chrono::steady_clock::time_point::max());
     LOG(INFO) << "client has ip:" << client_ip_;
-//    audio_server.add_client_transmission(client_ip_);
+    audio_server.add_client_transmission(client_ip_);
   }
 
   void start() {

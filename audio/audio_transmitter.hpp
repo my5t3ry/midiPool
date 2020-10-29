@@ -109,7 +109,7 @@ class audio_transmitter {
   static void initInputStreamReader(roc_sender *p_sender) {
     enum SoundIoBackend backend = SoundIoBackendNone;
     char *device_id = NULL;
-    bool is_raw = false;
+    bool is_raw = true;
     backend = SoundIoBackendAlsa;
 
     struct SoundIo *soundio = soundio_create();
@@ -143,7 +143,7 @@ class audio_transmitter {
     } else {
       LOG(ERROR) << "No input devices available.";
     }
-    LOG(ERROR) << "Device: " << selected_device->name;
+    LOG(ERROR) << "input Device: " << selected_device->name;
     if (selected_device->probe_error) {
       LOG(ERROR) << "Unable to probe device: " << soundio_strerror(selected_device->probe_error);
     }
@@ -181,7 +181,7 @@ class audio_transmitter {
     if ((err = soundio_instream_open(instream))) {
       LOG(ERROR) << "unable to open input stream: " << soundio_strerror(err);
     }
-    LOG(ERROR) <<  instream->layout.name <<" "<< sample_rate <<" "<< soundio_format_string(fmt)<<" interleaved";
+    LOG(ERROR) << instream->layout.name << " " << sample_rate << " " << soundio_format_string(fmt) << " interleaved";
     const int ring_buffer_duration_seconds = 30;
     int capacity = ring_buffer_duration_seconds * instream->sample_rate * instream->bytes_per_frame;
     ring_buffer = soundio_ring_buffer_create(soundio, capacity);
@@ -230,6 +230,7 @@ class audio_transmitter {
 
     sender_config.frame_sample_rate = config.sample_rate;
     sender_config.frame_channels = ROC_CHANNEL_SET_STEREO;
+    sender_config.resampler_profile = ROC_RESAMPLER_DISABLE;
     sender_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
     sender_config.automatic_timing = 1;
     roc_sender *sender = roc_sender_open(sender_context, &sender_config);

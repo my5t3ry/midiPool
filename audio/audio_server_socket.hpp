@@ -38,17 +38,19 @@ class audio_server_socket {
 
     roc_sender_config sender_config;
     memset(&sender_config, 0, sizeof(sender_config));
-    sender_config.frame_sample_rate = config.buffer_size;
+    sender_config.frame_sample_rate = config.sample_rate;
+
     sender_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     sender_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
+    sender_config.resampler_profile = ROC_RESAMPLER_DISABLE;
+    sender_config.automatic_timing = 1;
 
     roc_sender *sender = roc_sender_open(context, &sender_config);
     if (!sender) {
       LOG(ERROR) << "roc_sender_open";
     }
     roc_address sender_addr;
-    std::string sender_ip = "127.0.0.1";
-    if (roc_address_init(&sender_addr, ROC_AF_AUTO, sender_ip.c_str(), 4443) != 0) {
+    if (roc_address_init(&sender_addr, ROC_AF_AUTO, client_ip.c_str(), 5500) != 0) {
       LOG(ERROR) << "roc_address_init";
     }
     if (roc_sender_bind(sender, &sender_addr) != 0) {
@@ -94,7 +96,8 @@ class audio_server_socket {
     receiver_config.frame_sample_rate = config.sample_rate;
     receiver_config.frame_channels = ROC_CHANNEL_SET_STEREO;
     receiver_config.frame_encoding = ROC_FRAME_ENCODING_PCM_FLOAT;
-
+    receiver_config.resampler_profile = ROC_RESAMPLER_DISABLE;
+    receiver_config.automatic_timing = 1;
     roc_receiver *receiver = roc_receiver_open(context, &receiver_config);
     if (!receiver) {
       LOG(DEBUG) << "roc_receiver_open";

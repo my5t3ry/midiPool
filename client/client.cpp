@@ -17,9 +17,9 @@ int main(int argc, char *argv[]) {
 
     std::thread audio_transmitter
         (audio_transmitter::init_audio_transmitter, &target_ip);
-//    std::thread audio_socket
-//        (audio_client_socket::init_audio_socket, 2000, 2001);
-
+    std::thread audio_socket
+        (audio_client_socket::init_audio_socket, 2000, 2001);
+    
     boost::asio::io_context io_context(1);
     tcp::resolver resolver(io_context);
     auto endpoints = resolver.resolve(argv[1], argv[2]);
